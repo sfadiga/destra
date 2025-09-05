@@ -1,0 +1,6 @@
+pyserial
+pyelftools
+PySide6
+pyreadline3
+rich
+pyinstaller
