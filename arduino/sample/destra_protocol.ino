@@ -53,7 +53,7 @@
 
 #include <Arduino.h>
 
-// Serial communication constants
+// Constantes de comunicação serial
 #define SERIAL_START_MARKER 0xCAFE
 #define CMD_PEEK 0xF1
 #define CMD_POKE 0xF2
@@ -61,9 +61,9 @@
 #define STATUS_ADDRESS_RANGE_ERROR 0x01
 #define STATUS_SIZE_ERROR 0x02
 #define BAUD_RATE 115200
-#define BUFFER_SIZE 64 // Buffer for incoming data
+#define BUFFER_SIZE 64 // Buffer para dados recebidos
 
-// Serial state machine states
+// Estados da máquina de estados serial
 enum DestraState {
   WAIT_START_HIGH,
   WAIT_START_LOW,
@@ -75,53 +75,48 @@ enum DestraState {
   PROCESS_REQUEST
 };
 
-// Serial communication variables
+// Variáveis de comunicação serial
 DestraState destraState = WAIT_START_HIGH;
 uint8_t destraCommand = 0;
-uint16_t destraAddress = 0;  // 16-bit address
+uint16_t destraAddress = 0;  // Endereço de 16 bits
 uint8_t destraSize = 0;
 uint8_t addressLow = 0;
 uint8_t addressHigh = 0;
-uint8_t destraValueBuffer[8];  // Buffer for POKE value bytes
-uint8_t destraValueIndex = 0;   // Index for value buffer
+uint8_t destraValueBuffer[8];  // Buffer para bytes de valor do POKE
+uint8_t destraValueIndex = 0;   // Índice para buffer de valor
 
 
-// Place me at the begining of your setup()
+// Coloque-me no início do seu setup()
 void destraSetup() {
-  // Initialize serial communication
+  // Inicializar comunicação serial
   Serial.begin(BAUD_RATE);
-  // Wait for serial port to connect (needed for native USB boards)
+  // Aguardar conexão da porta serial (necessário para placas USB nativas)
   while (!Serial) {
-    ; // Wait for serial port to connect
+    ; // Aguardar conexão da porta serial
   }
   destraState = WAIT_START_HIGH;
-  Serial.println("Destra is ready...");
+  Serial.println("Destra está pronto...");
 }
 
-// Place me at the begining of your loop()
+// Coloque-me no início do seu loop()
 void destraHandler() {
-// Function to handle destra serial communication (non-blocking)
+// Função para lidar com comunicação serial destra (não bloqueante)
   while (Serial.available() > 0 && destraState != PROCESS_REQUEST) {
     uint8_t inByte = Serial.read();
   
-    //buffer[bufferIndex] = incomingByte;
-    //bufferIndex = (bufferIndex + 1) % BUFFER_SIZE;
-
-    // Packet / Request State Machine     
+    // Máquina de Estados do Pacote/Requisição     
     switch (destraState) {
-      // PEEK/POKE Packet starts with 0xCAFE
+      // Pacote PEEK/POKE começa com 0xCAFE
       case WAIT_START_HIGH:
         if (inByte == 0xCA) {
           int bytesAvailable = Serial.availableForWrite();
           destraState = WAIT_START_LOW;
-          Serial.write(inByte);
         }
         break;
         
       case WAIT_START_LOW:
         if (inByte == 0xFE) {
           destraState = WAIT_COMMAND;
-          Serial.write(inByte);
         } else {
           destraState = WAIT_START_HIGH;
         }
@@ -131,7 +126,6 @@ void destraHandler() {
         destraCommand = inByte;
         if (inByte == CMD_PEEK || inByte == CMD_POKE) {
           destraState = WAIT_ADDRESS_LOW;
-          Serial.write(inByte);
         } else {
           destraState = WAIT_START_HIGH;
         }
@@ -139,26 +133,23 @@ void destraHandler() {
         
       case WAIT_ADDRESS_LOW:
         addressLow = inByte;
-        Serial.write(inByte);
         destraState = WAIT_ADDRESS_HIGH;
         break;
         
       case WAIT_ADDRESS_HIGH:
         addressHigh = inByte;
-        Serial.write(inByte);
-        // Combine to 16-bit address (little endian)
+        // Combinar para endereço de 16 bits (little endian)
         destraAddress = addressLow | (addressHigh << 8);
         destraState = WAIT_SIZE;
         break;
         
       case WAIT_SIZE:
         destraSize = inByte;
-        Serial.write(inByte);
         if (destraCommand == CMD_PEEK) {
           destraState = PROCESS_REQUEST;
         }
         else if (destraCommand == CMD_POKE) {
-          destraValueIndex = 0;  // Reset value buffer index
+          destraValueIndex = 0;  // Resetar índice do buffer de valor
           destraState = WAIT_VALUE;
         }
         else {
@@ -167,46 +158,44 @@ void destraHandler() {
         break;
 
       case WAIT_VALUE:
-        // Store the value byte
+        // Armazenar o byte de valor
         destraValueBuffer[destraValueIndex] = inByte;
-        Serial.write(inByte);  // Echo back
         destraValueIndex++;
-        
-        // Check if we've received all value bytes
+        // Verificar se recebemos todos os bytes de valor
         if (destraValueIndex >= destraSize) {
           destraState = PROCESS_REQUEST;
         }
-        // Otherwise stay in WAIT_VALUE to collect more bytes
+        // Caso contrário, permanecer em WAIT_VALUE para coletar mais bytes
         break;
     }
   }
   
-  // Process the request if we have a complete message
+  // Processar a requisição se tivermos uma mensagem completa
   if (destraState == PROCESS_REQUEST) {
     if (destraCommand == CMD_PEEK) {
       processPeekRequest();
     } else if (destraCommand == CMD_POKE) {
       processPokeRequest();
     }
-    destraState = WAIT_START_HIGH;  // Reset for next request
+    destraState = WAIT_START_HIGH;  // Resetar para próxima requisição
   }
 }
 
 
-// Function to process peek request and send response
+// Função para processar requisição peek e enviar resposta
 void processPeekRequest() {
-  // Send response header
+  // Enviar cabeçalho da resposta
   Serial.write(0xCA);
   Serial.write(0xFE);
   Serial.write(CMD_PEEK);
   
-  // Validate address range (optional safety check)
-  if (destraAddress < 0x100 || destraAddress > 0x8FF) {  // Arduino Uno RAM range
+  // Validar faixa de endereço (verificação de segurança opcional)
+  if (destraAddress < 0x100 || destraAddress > 0x8FF) {  // Faixa de RAM do Arduino Uno
     Serial.write(STATUS_ADDRESS_RANGE_ERROR);
     return;
   }
 
-  // Validate size
+  // Validar tamanho
   if (destraSize == 0 || destraSize > 8) {
     Serial.write(STATUS_SIZE_ERROR);
     return;
@@ -214,8 +203,7 @@ void processPeekRequest() {
   
   Serial.write(STATUS_SUCCESS);
   
-  // Read and send the requested data
-  // uint8_t* ptr = (uint8_t*)peekAddress;
+  // Ler e enviar os dados solicitados
   uint8_t* ptr = (uint8_t*)destraAddress;
   for (uint8_t i = 0; i < destraSize; i++) {
     Serial.write(ptr[i]);
@@ -223,37 +211,37 @@ void processPeekRequest() {
 }
 
 
-// Function to process poke request and send response
+// Função para processar requisição poke e enviar resposta
 void processPokeRequest() {
-  // Send response header
+  // Enviar cabeçalho da resposta
   Serial.write(0xCA);
   Serial.write(0xFE);
   Serial.write(CMD_POKE);
   
-  // Validate address range
-  if (destraAddress < 0x100 || destraAddress > 0x8FF) {  // Arduino Uno RAM range
+  // Validar faixa de endereço
+  if (destraAddress < 0x100 || destraAddress > 0x8FF) {  // Faixa de RAM do Arduino Uno
     Serial.write(STATUS_ADDRESS_RANGE_ERROR);
     return;
   }
 
-  // Validate size (already checked in state machine, but double-check)
+  // Validar tamanho (já verificado na máquina de estados, mas dupla verificação)
   if (destraSize == 0 || destraSize > 8) {
     Serial.write(STATUS_SIZE_ERROR);
     return;
   }
   
-  // Write the data to memory
+  // Escrever os dados na memória
   uint8_t* ptr = (uint8_t*)destraAddress;
   for (uint8_t i = 0; i < destraSize; i++) {
     ptr[i] = destraValueBuffer[i];
   }
   
-  // Send success status
+  // Enviar status de sucesso
   Serial.write(STATUS_SUCCESS);
   
-  // Optionally, echo back the written data for verification
-  // This helps confirm the write was successful
+  // Opcionalmente, ecoar de volta os dados escritos para verificação
+  // Isso ajuda a confirmar que a escrita foi bem-sucedida
   for (uint8_t i = 0; i < destraSize; i++) {
-    Serial.write(ptr[i]);  // Read back from memory and send
+    Serial.write(ptr[i]);  // Ler de volta da memória e enviar
   }
 }

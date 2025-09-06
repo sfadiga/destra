@@ -41,28 +41,28 @@
 
 #include <Arduino.h>
 
-// TEST DATA (volatile guarantees that the variable will be at .elf)
+// TEST DATA (usamos variavaies como volatile para assegurar que estarão no arquivo .elf)
 volatile unsigned long rtc = 0;
 volatile float k_pi = 3.14f;
 volatile int k_radius = 3;
-volatile float a_result;
-volatile float a_other_result;
+volatile float result_circle_area;
+volatile float result_rtc_x_radius;
 
 void setup() {
-  destraSetup(); // start serial and destra
+  destraSetup(); // inicializa o protocolo destra (e a serial)
 }
 
 void loop() {
 
-  destraHandler(); // execute peek and poke commands
+  destraHandler(); // processa e executa peek and poke
 
-  a_result = k_pi * (k_radius * k_radius);
-  a_other_result = 2 * rtc;
+  // examplos de calculos com variaveis a serem monitoradas / alteradas
+  result_circle_area = k_pi * (k_radius * k_radius);
+  result_rtc_x_radius = k_radius * rtc;
   
-  //rtc += 1;
-  // Slow down the counter for easier monitoring
+  // atualiza um rtc a cada 100ms
   static unsigned long lastUpdate = 0;
-  if (millis() - lastUpdate > 100) {  // Update every 100ms
+  if (millis() - lastUpdate > 100) {  
       rtc += 1;
       lastUpdate = millis();
   }

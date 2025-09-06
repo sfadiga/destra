@@ -9,7 +9,7 @@ Data de Criação: 09/01/2025
 Versão: 1.0
 
 Descrição:
-    ELF Data Dictionary Parser para Arduino Uno.
+    Analisador de Dicionário de Dados ELF para Arduino Uno.
     Este módulo fornece uma interface simplificada para extrair informações
     de variáveis de arquivos ELF com informações de debug DWARF, especificamente
     projetado para implementar funcionalidade peek/poke no Arduino Uno.
@@ -28,7 +28,6 @@ Licença: MIT
 """
 
 from __future__ import annotations
-from enum import Enum
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
@@ -36,10 +35,16 @@ from typing import Dict, List, Optional, Tuple, Union
 from elftools.dwarf.die import DIE
 from elftools.elf.elffile import ELFFile
 
+from logger_config import DestraLogger
+
+# Configurar logger para este módulo
+logger_manager = DestraLogger()
+logger = logger_manager.logger.getChild("DataDictionary")
+
 
 @dataclass
 class VariableInfo:
-    """Information about a variable extracted from the ELF file."""
+    """Informações sobre uma variável extraída do arquivo ELF."""
 
     name: str
     address: int
@@ -53,31 +58,36 @@ class VariableInfo:
     def __hash__(self) -> int:
         return hash(self.name)
 
-class DecodedTypes():
+
+class DecodedTypes:
 
     @staticmethod
     def decode_type(vartype: str) -> tuple[str, int] | None:
-        LookupTable = {'uint8': ('I', 1),
-                   'uint16': ('I', 2), 
-                   'uint32': ('I', 4), 
-                   'int8': ('i', 1), 
-                   'int16': ('i', 2), 
-                   'int32': ('i', 4), 
-                   'float': ('f', 4), 
-                   'double': ('d', 8)
-                   }
+        LookupTable = {
+            "bytes": ("<B", -1),
+            "uint8": ("<B", 1),
+            "int8": ("<b", 1),
+            "uint16": ("<H", 2),
+            "int16": ("<h", 2),
+            "uint32": ("<I", 4),
+            "int32": ("<i", 4),
+            "long unsigned int": ("<I", 4),
+            "long": ("<i", 4),
+            "long signed int": ("<i", 4),
+            "float": ("f", 4),
+            "double": ("d", 8),
+        }
         return LookupTable.get(vartype, None)
-
 
 class ElfDataDictionary:
     """
-    A simplified ELF parser for extracting variable information.
+    Um analisador ELF simplificado para extrair informações de variáveis.
 
-    This class provides methods to list and query variables from an ELF file
-    with DWARF debug information, optimized for peek/poke operations.
+    Esta classe fornece métodos para listar e consultar variáveis de um arquivo ELF
+    com informações de debug DWARF, otimizado para operações peek/poke.
     """
 
-    # Type mapping for basic C types to simplified categories
+    # Mapeamento de tipos C básicos para categorias simplificadas
     TYPE_MAPPING = {
         ("unsigned char", 1): ("uint8", False),
         ("uint8_t", 1): ("uint8", False),
@@ -86,57 +96,57 @@ class ElfDataDictionary:
         ("unsigned short", 2): ("uint16", False),
         ("uint16_t", 2): ("uint16", False),
         ("short", 2): ("int16", True),
-        ("int", 2): ("int16", True),  # Arduino Uno int is 16-bit
+        ("int", 2): ("int16", True),  # int do Arduino Uno é 16-bit
         ("unsigned int", 2): ("uint16", False),
         ("unsigned long", 4): ("uint32", False),
         ("uint32_t", 4): ("uint32", False),
         ("long", 4): ("int32", True),
         ("long int", 4): ("int32", True),
         ("float", 4): ("float", True),
-        ("double", 4): ("float", True),  # Arduino Uno double is same as float
+        ("double", 4): ("float", True),  # double do Arduino Uno é igual a float
     }
 
     def __init__(self, elf_path: Union[str, Path]):
         """
-        Initialize the ELF data dictionary parser.
+        Inicializar o analisador de dicionário de dados ELF.
 
         Args:
-            elf_path: Path to the ELF file
+            elf_path: Caminho para o arquivo ELF
 
         Raises:
-            FileNotFoundError: If the ELF file doesn't exist
-            ValueError: If the file is not a valid ELF file or lacks debug info
+            FileNotFoundError: Se o arquivo ELF não existir
+            ValueError: Se o arquivo não for um ELF válido ou não tiver informações de debug
         """
         self.elf_path = Path(elf_path)
         if not self.elf_path.exists():
-            raise FileNotFoundError(f"ELF file not found: {self.elf_path}")
+            raise FileNotFoundError(f"Arquivo ELF não encontrado: {self.elf_path}")
 
         self._variables: Dict[str, VariableInfo] = {}
         self._parse_elf_file()
 
     def _parse_elf_file(self) -> None:
-        """Parse the ELF file and extract variable information."""
+        """Analisar o arquivo ELF e extrair informações de variáveis."""
         with open(self.elf_path, "rb") as f:
             try:
                 elffile = ELFFile(f)
             except Exception as e:
-                raise ValueError(f"Invalid ELF file: {e}")
+                raise ValueError(f"Arquivo ELF inválido: {e}")
 
             if not elffile.has_dwarf_info():
-                raise ValueError("ELF file lacks DWARF debug information")
+                raise ValueError("Arquivo ELF não possui informações de debug DWARF")
 
             dwarf_info = elffile.get_dwarf_info()
 
-            # Parse all compilation units
+            # Analisar todas as unidades de compilação
             for cu in dwarf_info.iter_CUs():
                 self._parse_compilation_unit(cu)
 
     def _parse_compilation_unit(self, cu) -> None:
-        """Parse a single compilation unit for variables."""
-        # Build a cache of DIE offsets to parsed type information
+        """Analisar uma única unidade de compilação para variáveis."""
+        # Construir um cache de offsets DIE para informações de tipo analisadas
         type_cache = {}
 
-        # First pass: parse all type definitions
+        # Primeira passada: analisar todas as definições de tipo
         for die in cu.iter_DIEs():
             if die.tag in [
                 "DW_TAG_base_type",
@@ -151,7 +161,7 @@ class ElfDataDictionary:
                 if type_info:
                     type_cache[die.offset] = type_info
 
-        # Second pass: parse variables
+        # Segunda passada: analisar variáveis
         for die in cu.iter_DIEs():
             if (
                 die.tag == "DW_TAG_variable"
@@ -160,7 +170,7 @@ class ElfDataDictionary:
                 self._parse_variable(die, cu, type_cache)
 
     def _parse_type(self, die: DIE, cu, type_cache: dict) -> Optional[dict]:
-        """Parse type information from a DIE."""
+        """Analisar informações de tipo de um DIE."""
         type_info = {}
 
         if die.tag == "DW_TAG_base_type":
@@ -182,7 +192,7 @@ class ElfDataDictionary:
                         "is_struct": False,
                     }
                 else:
-                    # Unknown base type, store raw info
+                    # Tipo base desconhecido, armazenar informação bruta
                     type_info = {
                         "base_type": name_str,
                         "size": size_val,
@@ -193,21 +203,21 @@ class ElfDataDictionary:
                     }
 
         elif die.tag == "DW_TAG_typedef":
-            # Follow the typedef to the actual type
+            # Seguir o typedef até o tipo real
             type_attr = die.attributes.get("DW_AT_type")
             if type_attr:
                 ref_offset = self._get_reference_offset(type_attr, cu)
                 if ref_offset in type_cache:
                     type_info = type_cache[ref_offset].copy()
                 else:
-                    # Try to find the referenced DIE
+                    # Tentar encontrar o DIE referenciado
                     ref_die = self._get_die_at_offset(cu, ref_offset)
                     if ref_die:
                         type_info = self._parse_type(ref_die, cu, type_cache) or {}
 
         elif die.tag == "DW_TAG_pointer_type":
             type_info = {
-                "base_type": "uint16",  # Pointers are 16-bit on Arduino Uno
+                "base_type": "uint16",  # Ponteiros são 16-bit no Arduino Uno
                 "size": 2,
                 "is_signed": False,
                 "is_pointer": True,
@@ -221,7 +231,7 @@ class ElfDataDictionary:
                 ref_offset = self._get_reference_offset(type_attr, cu)
                 element_type = type_cache.get(ref_offset, {})
 
-                # Get array dimensions
+                # Obter dimensões do array
                 dimensions = []
                 for child in die.iter_children():
                     if child.tag == "DW_TAG_subrange_type":
@@ -243,7 +253,7 @@ class ElfDataDictionary:
             name = die.attributes.get("DW_AT_name")
             size = die.attributes.get("DW_AT_byte_size")
 
-            if size:  # Only process complete struct definitions
+            if size:  # Processar apenas definições completas de struct
                 struct_name = name.value.decode("utf-8") if name else "anonymous_struct"
                 type_info = {
                     "base_type": "struct",
@@ -255,7 +265,7 @@ class ElfDataDictionary:
                     "struct_name": struct_name,
                 }
 
-                # Parse struct members
+                # Analisar membros da struct
                 members = []
                 for member_die in die.iter_children():
                     if member_die.tag == "DW_TAG_member":
@@ -268,7 +278,7 @@ class ElfDataDictionary:
                 type_info["members"] = members
 
         elif die.tag in ["DW_TAG_const_type", "DW_TAG_volatile_type"]:
-            # These are type qualifiers, follow to the actual type
+            # Estes são qualificadores de tipo, seguir até o tipo real
             type_attr = die.attributes.get("DW_AT_type")
             if type_attr:
                 ref_offset = self._get_reference_offset(type_attr, cu)
@@ -282,7 +292,7 @@ class ElfDataDictionary:
         return type_info
 
     def _parse_struct_member(self, die: DIE, cu, type_cache: dict) -> Optional[dict]:
-        """Parse a struct member."""
+        """Analisar um membro de struct."""
         name = die.attributes.get("DW_AT_name")
         type_attr = die.attributes.get("DW_AT_type")
         location = die.attributes.get("DW_AT_data_member_location")
@@ -294,9 +304,9 @@ class ElfDataDictionary:
 
             offset = 0
             if location:
-                # Extract offset from location
+                # Extrair offset da localização
                 if isinstance(location.value, list) and len(location.value) > 1:
-                    # DW_OP_plus_uconst format
+                    # Formato DW_OP_plus_uconst
                     offset = location.value[1]
                 elif isinstance(location.value, int):
                     offset = location.value
@@ -306,47 +316,51 @@ class ElfDataDictionary:
         return None
 
     def _parse_variable(self, die: DIE, cu, type_cache: dict) -> None:
-        """Parse a variable DIE and add it to the dictionary."""
+        """Analisar um DIE de variável e adicioná-lo ao dicionário."""
         name_attr = die.attributes.get("DW_AT_name")
         type_attr = die.attributes.get("DW_AT_type")
         location_attr = die.attributes.get("DW_AT_location")
 
-        # Must have at least name and type
+        # Deve ter pelo menos nome e tipo
         if not (name_attr and type_attr):
             return
 
         var_name = name_attr.value.decode("utf-8")
 
-        # Get address from location if available
+        # Obter endereço da localização se disponível
         address = 0
         if location_attr:
             address = self._extract_address(location_attr.value)
             if address is None:
-                # If we can't extract address, try to use a default or skip
-                # Some variables might be optimized out or in registers
-                print(f"Warning: Could not extract address for variable '{var_name}'")
-                # For now, we'll still add it with address 0
+                # Se não conseguirmos extrair o endereço, tentar usar um padrão ou pular
+                # Algumas variáveis podem estar otimizadas ou em registradores
+                logger.warning(
+                    f"Não foi possível extrair endereço para variável '{var_name}'"
+                )
+                # Por enquanto, ainda vamos adicioná-la com endereço 0
                 address = 0
         else:
-            # Variable without location - might be external, const, or optimized
-            # Check if it's external
+            # Variável sem localização - pode ser externa, const ou otimizada
+            # Verificar se é externa
             if "DW_AT_external" in die.attributes:
-                print(f"Info: Variable '{var_name}' is external (global)")
-                # External variables should have addresses, but might need linking
-                address = 0  # Will be resolved at link time
+                logger.debug(f"Variável '{var_name}' é externa (global)")
+                # Variáveis externas devem ter endereços, mas podem precisar de linking
+                address = 0  # Será resolvido no tempo de link
             else:
-                print(f"Info: Variable '{var_name}' has no location (might be optimized out)")
-                # Still add it with address 0 for completeness
+                logger.debug(
+                    f"Variável '{var_name}' não tem localização (pode estar otimizada)"
+                )
+                # Ainda adicionar com endereço 0 para completude
                 address = 0
 
-        # Get type information
+        # Obter informações de tipo
         ref_offset = self._get_reference_offset(type_attr, cu)
         type_info = type_cache.get(ref_offset, {})
 
         if not type_info:
             return
 
-        # Create base variable info
+        # Criar informações base da variável
         var_info = VariableInfo(
             name=var_name,
             address=address,
@@ -360,22 +374,22 @@ class ElfDataDictionary:
 
         self._variables[var_name] = var_info
 
-        # If it's an array, add individual element entries
+        # Se for um array, adicionar entradas de elementos individuais
         if type_info.get("is_array") and type_info.get("array_dimensions"):
             self._add_array_elements(var_name, var_info, type_info)
 
-        # If it's a struct, add member entries
+        # Se for uma struct, adicionar entradas de membros
         if type_info.get("is_struct") and "members" in type_info:
             self._add_struct_members(var_name, var_info, type_info)
 
     def _add_array_elements(
         self, base_name: str, base_info: VariableInfo, type_info: dict
     ) -> None:
-        """Add individual array element entries."""
+        """Adicionar entradas de elementos individuais do array."""
         dimensions = type_info["array_dimensions"]
         element_size = type_info["size"] // (dimensions[0] if dimensions else 1)
 
-        # For now, just handle 1D arrays
+        # Por enquanto, apenas lidar com arrays 1D
         if len(dimensions) == 1:
             for i in range(dimensions[0]):
                 element_name = f"{base_name}[{i}]"
@@ -394,7 +408,7 @@ class ElfDataDictionary:
     def _add_struct_members(
         self, base_name: str, base_info: VariableInfo, type_info: dict
     ) -> None:
-        """Add struct member entries."""
+        """Adicionar entradas de membros da struct."""
         for member in type_info.get("members", []):
             member_name = f"{base_name}.{member['name']}"
             member_type_info = member.get("type_info", {})
@@ -412,64 +426,64 @@ class ElfDataDictionary:
             self._variables[member_name] = member_info
 
     def _get_reference_offset(self, attr, cu) -> int:
-        """Get the absolute offset for a reference attribute."""
+        """Obter o offset absoluto para um atributo de referência."""
         offset = attr.value
         if attr.form == "DW_FORM_ref4":
-            # CU-relative offset
+            # Offset relativo à CU
             offset += cu.cu_offset
         return offset
 
     def _get_die_at_offset(self, cu, offset: int) -> Optional[DIE]:
-        """Get a DIE at a specific offset within a CU."""
+        """Obter um DIE em um offset específico dentro de uma CU."""
         try:
             return cu._get_cached_DIE(offset)
         except:
             return None
 
     def _extract_address(self, location_value) -> Optional[int]:
-        """Extract address from DWARF location expression."""
+        """Extrair endereço de expressão de localização DWARF."""
         if isinstance(location_value, list):
             if len(location_value) == 0:
                 return None
-            
-            # Check for DW_OP_addr (0x03) - direct address
+
+            # Verificar DW_OP_addr (0x03) - endereço direto
             if location_value[0] == 0x03 and len(location_value) >= 3:
-                # Address follows the opcode (16-bit for AVR)
+                # Endereço segue o opcode (16-bit para AVR)
                 return int.from_bytes(bytes(location_value[1:3]), "little")
-            
-            # Check for other common location expressions
-            # DW_OP_fbreg - frame base relative (local variables)
+
+            # Verificar outras expressões de localização comuns
+            # DW_OP_fbreg - relativo à base do frame (variáveis locais)
             if location_value[0] == 0x91:
-                # This is a stack-relative variable, we can't get absolute address
+                # Esta é uma variável relativa à pilha, não podemos obter endereço absoluto
                 return None
-            
-            # Try to extract from the last 2 bytes (legacy behavior)
+
+            # Tentar extrair dos últimos 2 bytes (comportamento legado)
             if len(location_value) >= 2:
-                # Some compilers put the address directly without opcode
+                # Alguns compiladores colocam o endereço diretamente sem opcode
                 return int.from_bytes(bytes(location_value[-2:]), "little")
-        
+
         elif isinstance(location_value, int):
-            # Direct address value
+            # Valor de endereço direto
             return location_value
-        
+
         return None
 
-    # Public API methods
+    # Métodos da API pública
 
     def list_variables(self, pattern: Optional[str] = None) -> List[str]:
         """
-        List all variable names, optionally filtered by pattern.
+        Listar todos os nomes de variáveis, opcionalmente filtrados por padrão.
 
         Args:
-            pattern: Optional glob pattern to filter variable names (e.g., "dig*pin*pgm")
+            pattern: Padrão glob opcional para filtrar nomes de variáveis (ex: "dig*pin*pgm")
 
         Returns:
-            List of variable names matching the pattern
+            Lista de nomes de variáveis correspondentes ao padrão
         """
         names = list(self._variables.keys())
 
         if pattern:
-            # Convert glob pattern to case-insensitive matching
+            # Converter padrão glob para correspondência case-insensitive
             import fnmatch
 
             pattern_lower = pattern.lower()
@@ -481,13 +495,13 @@ class ElfDataDictionary:
 
     def get_variable_info(self, name: str) -> Optional[Tuple[int, int, str]]:
         """
-        Get variable information by name.
+        Obter informações de variável por nome.
 
         Args:
-            name: Variable name (can include array indices or struct members)
+            name: Nome da variável (pode incluir índices de array ou membros de struct)
 
         Returns:
-            Tuple of (address, size, type) or None if not found
+            Tupla de (endereço, tamanho, tipo) ou None se não encontrado
         """
         var_info = self._variables.get(name)
         if var_info:
@@ -496,13 +510,13 @@ class ElfDataDictionary:
 
     def get_detailed_variable_info(self, name: str) -> Optional[VariableInfo]:
         """
-        Get detailed variable information by name.
+        Obter informações detalhadas de variável por nome.
 
         Args:
-            name: Variable name
+            name: Nome da variável
 
         Returns:
-            VariableInfo object or None if not found
+            Objeto VariableInfo ou None se não encontrado
         """
         return self._variables.get(name)
 
@@ -514,32 +528,32 @@ class ElfDataDictionary:
         var_type: Optional[str] = None,
     ) -> List[VariableInfo]:
         """
-        Search variables with multiple filters.
+        Buscar variáveis com múltiplos filtros.
 
         Args:
-            pattern: Glob pattern for name matching
-            min_size: Minimum variable size in bytes
-            max_size: Maximum variable size in bytes
-            var_type: Filter by type (e.g., 'uint8', 'float', 'struct')
+            pattern: Padrão glob para correspondência de nome
+            min_size: Tamanho mínimo da variável em bytes
+            max_size: Tamanho máximo da variável em bytes
+            var_type: Filtrar por tipo (ex: 'uint8', 'float', 'struct')
 
         Returns:
-            List of VariableInfo objects matching all criteria
+            Lista de objetos VariableInfo correspondentes a todos os critérios
         """
         results = []
 
-        # First filter by name pattern
+        # Primeiro filtrar por padrão de nome
         matching_names = self.list_variables(pattern)
 
         for name in matching_names:
             var_info = self._variables[name]
 
-            # Apply size filters
+            # Aplicar filtros de tamanho
             if min_size is not None and var_info.size < min_size:
                 continue
             if max_size is not None and var_info.size > max_size:
                 continue
 
-            # Apply type filter
+            # Aplicar filtro de tipo
             if var_type is not None and var_info.base_type != var_type:
                 continue
 
@@ -548,55 +562,59 @@ class ElfDataDictionary:
         return results
 
     def get_all_variables(self) -> Dict[str, VariableInfo]:
-        """Get all variables as a dictionary."""
+        """Obter todas as variáveis como um dicionário."""
         return self._variables.copy()
 
 
 def main():
-    """Example usage of the ELF data dictionary."""
+    """Exemplo de uso do dicionário de dados ELF."""
     import sys
     from pathlib import Path
 
+    # Configurar logger para o main
+    test_logger = logger_manager.logger.getChild("Test")
+
     if len(sys.argv) < 2:
-        print("Usage: python elf_data_dictionary.py <elf_file>")
+        test_logger.error("Uso: python data_dictionary.py <arquivo_elf>")
         sys.exit(1)
 
     elf_path = Path(sys.argv[1])
 
     try:
-        # Create the data dictionary
+        # Criar o dicionário de dados
         data_dict = ElfDataDictionary(elf_path)
 
-        # Example 1: List all variables
-        print("Total variables found:", len(data_dict.get_all_variables()))
-        print()
+        # Exemplo 1: Listar todas as variáveis
+        test_logger.info(
+            f"Total de variáveis encontradas: {len(data_dict.get_all_variables())}"
+        )
 
-        # Example 2: Search for digital pin related variables
-        print("Digital pin variables:")
+        # Exemplo 2: Buscar variáveis relacionadas a pinos digitais
+        test_logger.info("Variáveis de pinos digitais:")
         for name in data_dict.list_variables("*digital*pin*"):
             info = data_dict.get_variable_info(name)
             if info:
                 addr, size, var_type = info
-                print(f"  {name}: addr=0x{addr:04X}, size={size}, type={var_type}")
-        print()
+                test_logger.info(
+                    f"  {name}: addr=0x{addr:04X}, size={size}, type={var_type}"
+                )
 
-        # Example 3: Search for timer variables
-        print("Timer variables:")
+        # Exemplo 3: Buscar variáveis de timer
+        test_logger.info("Variáveis de timer:")
         for var in data_dict.search_variables("timer*"):
-            print(
+            test_logger.info(
                 f"  {var.name}: addr=0x{var.address:04X}, size={var.size}, type={var.base_type}"
             )
-        print()
 
-        # Example 4: Find all float variables
-        print("Float variables:")
+        # Exemplo 4: Encontrar todas as variáveis float
+        test_logger.info("Variáveis float:")
         for var in data_dict.search_variables("*", var_type="float"):
-            print(f"  {var.name}: addr=0x{var.address:04X}")
+            test_logger.info(f"  {var.name}: addr=0x{var.address:04X}")
 
     except FileNotFoundError as e:
-        print(f"Error: {e}")
+        test_logger.error(f"Erro: {e}")
     except ValueError as e:
-        print(f"Error: {e}")
+        test_logger.error(f"Erro: {e}")
 
 
 if __name__ == "__main__":
