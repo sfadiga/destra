@@ -33,11 +33,15 @@ Dependências:
 Licença: MIT
 """
 import time
-from typing import Optional
+from typing import Optional, Union, List
 import struct
 
 import serial
 import serial.tools.list_ports
+
+from logger_config import DestraLogger
+
+from data_dictionary import DecodedTypes
 
 
 class DestraProtocol:
@@ -62,9 +66,13 @@ class DestraProtocol:
         self.port = port
         self.ser = None
 
-    def auto_detect_arduino(self) -> tuple[list, list]:
+        # Configurar logger
+        logger_manager = DestraLogger()
+        self.logger = logger_manager.logger.getChild("Protocol")
+
+    def auto_detect_arduino(self) -> tuple[List, List]:
         """Auto-detectar porta COM do Arduino"""
-        print("Auto-detectando porta do Arduino...")
+        self.logger.info("Auto-detectando porta do Arduino...")
         ports = serial.tools.list_ports.comports()
 
         arduino_ports = []
@@ -76,24 +84,27 @@ class DestraProtocol:
                 for x in ["arduino", "ch340", "ft232", "cp210"]
             ):
                 arduino_ports.append(port)
-                print(f"  Arduino potencial encontrado: {port.device} - {port.description}")
+                self.logger.debug(
+                    f"Arduino potencial encontrado: {port.device} - {port.description}"
+                )
 
         if not arduino_ports:
-            print("Nenhum Arduino detectado. Portas disponíveis:")
+            self.logger.warning("Nenhum Arduino detectado. Portas disponíveis:")
             for port in ports:
-                other_ports.append(port)   
-                print(f"  {port.device} - {port.description}")
-            #raise Exception("Nenhum Arduino encontrado. Por favor, especifique a porta manualmente.")
+                other_ports.append(port)
+                self.logger.debug(f"  {port.device} - {port.description}")
 
         if len(arduino_ports) > 1:
-            print(f"Múltiplos Arduinos encontrados. Usando o primeiro: {arduino_ports[0]}")
+            self.logger.info(
+                f"Múltiplos Arduinos encontrados. Usando o primeiro: {arduino_ports[0]}"
+            )
 
         return arduino_ports, other_ports
 
     def connect(self) -> bool:
         """Conectar ao Arduino"""
         try:
-            print(f"\nConectando a {self.port} em {self.baudrate} baud...")
+            self.logger.info(f"Conectando a {self.port} em {self.baudrate} baud...")
 
             # Abrir conexão serial com configurações padrão 8N1
             self.ser = serial.Serial(
@@ -116,38 +127,83 @@ class DestraProtocol:
             # Verificar mensagem de inicialização
             if self.ser.in_waiting > 0:
                 startup_msg = self.ser.readline().decode("utf-8").strip()
-                print(f"Arduino diz: {startup_msg}")
+                self.logger.debug(f"Arduino diz: {startup_msg}")
                 if "ECHO_TEST_READY" in startup_msg:
-                    print("✓ Arduino está pronto!")
+                    self.logger.info("Arduino está pronto!")
                     return True
 
-            print("✓ Conectado com sucesso!")
+            self.logger.info("Conectado com sucesso!")
             return True
 
         except serial.SerialException as e:
-            print(f"✗ Falha ao conectar: {e}")
+            self.logger.error(f"Falha ao conectar: {e}")
             return False
 
     def disconnect(self):
         """Desconectar do Arduino"""
         if self.ser and self.ser.is_open:
             self.ser.close()
-            print("Desconectado do Arduino")
+            self.logger.info("Desconectado do Arduino")
 
-    def _magic_word_check(self) -> bool:
-        if not self.ser or not self.ser.is_open:
-            print("Não conectado!")
-            return False
-        self.ser.reset_input_buffer()
-        self.ser.write(self.MAGIC_CA)
-        echo = self.ser.read(1)
-        print(f"magic_ca {echo=}")
-        if echo == self.MAGIC_CA:
-            self.ser.write(self.MAGIC_FE)
-            echo = self.ser.read(1)
-            print(f"magic_fe {echo=}")
-            return echo == self.MAGIC_FE
-        return False
+    def _common_protocol_payload(
+        self, command: bytes, address: int, size: int
+    ) -> bytes:
+        """
+        Constroi a parte comum ao pacote serial para ser enviado nos comandos
+        """
+        # Constroi a palavra magica, comando, endereço e tamanho, tansfere tudo num só write
+        message: bytes = struct.pack(">c", self.MAGIC_CA)
+        message += struct.pack(">c", self.MAGIC_FE)
+        message += struct.pack(">c", command)
+        addr_low = address & 0xFF  # extrai os 8 bits
+        addr_high = (address >> 8) & 0xFF  # extrai os 8 bits
+        message += struct.pack(">B", addr_low)
+        message += struct.pack(">B", addr_high)
+        message += struct.pack(">B", size)
+        return message
+
+    def _common_protocol_response(
+        self, command: bytes, address: int = 0, size: int = 0
+    ) -> tuple[bool, bytes | None]:
+        if not self.ser:
+            return False, None
+
+        # Ler cabeçalho da resposta
+        response_header = self.ser.read(4)  # CA FE F2 STATUS
+        if len(response_header) < 4:
+            self.logger.error(
+                f"Cabeçalho de resposta incompleto: {response_header.hex()}"
+            )
+            return False, None
+
+        # Verificar cabeçalho da resposta
+        if response_header[0:3] != b"\xca\xfe" + command:  # Nota: F2 para POKE
+            self.logger.error(
+                f"Cabeçalho de resposta inválido: {response_header.hex()}"
+            )
+            return False, None
+
+        # Verificar status
+        status = response_header[3]
+        if status == self.STATUS_ADDRESS_RANGE_ERROR:
+            self.logger.error(f"Erro de faixa de endereço: {address:#06x}")
+            return False, None
+        if status == self.STATUS_SIZE_ERROR:
+            self.logger.error(f"Erro de tamanho: {size}")
+            return False, None
+        if status != self.STATUS_SUCCESS:
+            self.logger.error(f"Status desconhecido: {status:#04x}")
+            return False, None
+
+        # Ler os dados
+        data = self.ser.read(size)
+        if len(data) != size:
+            self.logger.error(
+                f"Dados incompletos: esperado {size} bytes, recebido {len(data)}"
+            )
+            return False, data
+
+        return True, data
 
     def peek(self, address: int, size: int) -> Optional[bytes]:
         """
@@ -161,188 +217,74 @@ class DestraProtocol:
             objeto bytes com o conteúdo da memória, ou None se falhou
         """
         if not self.ser or not self.ser.is_open:
-            print("Não conectado!")
+            self.logger.error("Não conectado!")
             return None
 
         # Validar parâmetros
-        if not (0 <= address <= 0xFFFF):
-            print(f"Endereço inválido: {address:#06x} (deve ser 0-0xFFFF)")
+        if not 0 <= address <= 0xFFFF:
+            self.logger.error(f"Endereço inválido: {address:#06x} (deve ser 0-0xFFFF)")
             return None
-        if not (1 <= size <= 8):
-            print(f"Tamanho inválido: {size} (deve ser 1-8)")
+
+        if not 1 <= size <= 8:
+            self.logger.error(f"Tamanho inválido: {size} (deve ser 1-8)")
             return None
 
         try:
-            # Enviar palavra mágica
-            if not self._magic_word_check():
-                print("Verificação de palavra mágica falhou!")
-                return None
-
-            # Enviar comando PEEK
-            self.ser.write(self.PEEK_CMD)
-            echo = self.ser.read(1)
-            if echo != self.PEEK_CMD:
-                print(
-                    f"Incompatibilidade de eco do comando: esperado {self.PEEK_CMD.hex()}, recebido {echo.hex()}"
+            message: bytes = self._common_protocol_payload(self.PEEK_CMD, address, size)
+            self.ser.write(message)
+            status, data = self._common_protocol_response(self.PEEK_CMD, address, size)
+            if status and data:
+                # Sucesso! Retornar os dados
+                self.logger.debug(
+                    f"Peek bem-sucedido: endereço={address:#06x}, tamanho={size}"
                 )
-                return None
-
-            # Enviar endereço (byte baixo primeiro para expectativa little-endian do Arduino)
-            address_bytes = address.to_bytes(2, "big")
-
-            # Enviar byte baixo
-            self.ser.write(bytes([address_bytes[1]]))
-            echo = self.ser.read(1)
-            if echo != bytes([address_bytes[1]]):
-                print(f"Incompatibilidade de eco do byte baixo do endereço")
-                return None
-
-            # Enviar byte alto
-            self.ser.write(bytes([address_bytes[0]]))
-            echo = self.ser.read(1)
-            if echo != bytes([address_bytes[0]]):
-                print(f"Incompatibilidade de eco do byte alto do endereço")
-                return None
-
-            # Enviar tamanho
-            self.ser.write(bytes([size]))
-            echo = self.ser.read(1)
-            if echo != bytes([size]):
-                print(f"Incompatibilidade de eco do tamanho")
-                return None
-
-            # Ler cabeçalho da resposta
-            response_header = self.ser.read(4)  # CA FE F1 STATUS
-            if len(response_header) < 4:
-                print(f"Cabeçalho de resposta incompleto: {response_header.hex()}")
-                return None
-
-            # Verificar cabeçalho da resposta
-            if response_header[0:3] != b"\xca\xfe\xf1":
-                print(f"Cabeçalho de resposta inválido: {response_header.hex()}")
-                return None
-
-            # Verificar status
-            status = response_header[3]
-            if status == self.STATUS_ADDRESS_RANGE_ERROR:
-                print(f"Erro de faixa de endereço: {address:#06x}")
-                return None
-            elif status == self.STATUS_SIZE_ERROR:
-                print(f"Erro de tamanho: {size}")
-                return None
-            elif status != self.STATUS_SUCCESS:
-                print(f"Status desconhecido: {status:#04x}")
-                return None
-
-            # Ler os dados
-            data = self.ser.read(size)
-            if len(data) != size:
-                print(f"Dados incompletos: esperado {size} bytes, recebido {len(data)}")
-                return None
-
-            # Sucesso! Retornar os dados
-            print(f"Peek bem-sucedido: endereço={address:#06x}, tamanho={size}")
-            print(f"Dados (hex): {' '.join(f'{b:02x}' for b in data)}")
-
+                self.logger.debug(f"Dados (hex): {' '.join(f'{b:02x}' for b in data)}")
             return data
-
         except serial.SerialTimeoutException:
-            print("Timeout serial!")
+            self.logger.error("Timeout serial!")
             return None
         except Exception as e:
-            print(f"Erro durante peek: {e}")
+            self.logger.error(f"Erro durante peek: {e}", exc_info=True)
             return None
 
-    def decode_peek_data(self, data: bytes, data_type: str = "hex") -> any:
+    def decode_peek_data(
+        self, data: Optional[bytes], data_type: str
+    ) -> Union[float, int, bytes, str, None]:
         """
         Decodificar os bytes brutos do peek em vários tipos de dados.
 
         Args:
             data: Bytes brutos da operação peek
-            data_type: Tipo para decodificar. Opções:
-                - 'hex': String hexadecimal
-                - 'uint8': Inteiro sem sinal de 8 bits
-                - 'int8': Inteiro com sinal de 8 bits
-                - 'uint16': Inteiro sem sinal de 16 bits (little-endian)
-                - 'int16': Inteiro com sinal de 16 bits (little-endian)
-                - 'uint32': Inteiro sem sinal de 32 bits (little-endian)
-                - 'int32': Inteiro com sinal de 32 bits (little-endian)
-                - 'float': Float de 32 bits (little-endian)
-                - 'double': Double de 64 bits (little-endian)
-                - 'string': String ASCII
-                - 'bytes': Bytes brutos (sem decodificação)
+            data_type: Tipo para decodificar, disponiveis em Data Dictionary / Decode Types
 
         Returns:
             Valor decodificado no tipo especificado
         """
-        if not data:
-            return None
-
         try:
-            if data_type == "hex":
-                return " ".join(f"{b:02x}" for b in data)
+            if not data:
+                raise ValueError("Dados inválidos para decodificar peek")
 
-            elif data_type == "uint8":
-                if len(data) < 1:
-                    raise ValueError("Precisa de pelo menos 1 byte para uint8")
-                return data[0]
-
-            elif data_type == "int8":
-                if len(data) < 1:
-                    raise ValueError("Precisa de pelo menos 1 byte para int8")
-                return struct.unpack("<b", data[:1])[0]
-
-            elif data_type == "uint16":
-                if len(data) < 2:
-                    raise ValueError("Precisa de pelo menos 2 bytes para uint16")
-                return struct.unpack("<H", data[:2])[0]
-
-            elif data_type == "int16":
-                if len(data) < 2:
-                    raise ValueError("Precisa de pelo menos 2 bytes para int16")
-                return struct.unpack("<h", data[:2])[0]
-
-            elif data_type in ("uint32", "long unsigned int"):
-                if len(data) < 4:
-                    raise ValueError("Precisa de pelo menos 4 bytes para uint32")
-                return struct.unpack("<I", data[:4])[0]
-
-            elif data_type in ("int32", "long", "long signed int"):
-                if len(data) < 4:
-                    raise ValueError("Precisa de pelo menos 4 bytes para int32")
-                return struct.unpack("<i", data[:4])[0]
-
-            elif data_type == "float":
-                if len(data) < 4:
-                    raise ValueError("Precisa de pelo menos 4 bytes para float")
-                return struct.unpack("<f", data[:4])[0]
-
-            elif data_type == "double":
-                if len(data) < 8:
-                    raise ValueError("Precisa de pelo menos 8 bytes para double")
-                return struct.unpack("<d", data[:8])[0]
-
-            elif data_type == "string":
-                # Decodificar como ASCII, parar no terminador nulo se presente
-                null_idx = data.find(b"\x00")
-                if null_idx >= 0:
-                    data = data[:null_idx]
-                return data.decode("ascii", errors="replace")
-
-            elif data_type == "bytes":
-                return data
-
-            else:
+            decoded = DecodedTypes.decode_type(data_type)
+            if not decoded:
                 raise ValueError(f"Tipo de dados desconhecido: {data_type}")
 
+            fmt, size = decoded
+
+            if len(data) < size:
+                raise ValueError(f"Precisa de pelo menos {size} byte para {data_type}")
+
+            return struct.unpack(fmt, data[:size])[0]
+
         except struct.error as e:
-            print(f"Erro de desempacotamento de struct: {e}")
+            self.logger.error(f"Erro de desempacotamento de struct: {e}")
             return None
         except Exception as e:
-            print(f"Erro de decodificação: {e}")
+            self.logger.error(f"Erro de decodificação: {e}")
             return None
 
-    def poke(self, address: int, size: int, value: float | int | bytes) -> bool:
+    def poke(
+        self, address: int, size: Optional[int], value: Union[float, int, bytes]
+    ) -> bool:
         """
         Escrever dados na memória do Arduino no endereço especificado.
 
@@ -358,7 +300,7 @@ class DestraProtocol:
             True se bem-sucedido, False caso contrário
         """
         if not self.ser or not self.ser.is_open:
-            print("Não conectado!")
+            self.logger.error("Não conectado!")
             return False
 
         # Converter valor para bytes se necessário
@@ -380,7 +322,7 @@ class DestraProtocol:
             elif size == 4:
                 value_bytes = struct.pack("<I" if value >= 0 else "<i", value)
             else:
-                print(f"Tamanho inválido {size} para valor inteiro")
+                self.logger.error(f"Tamanho inválido {size} para valor inteiro")
                 return False
 
         elif isinstance(value, float):
@@ -393,112 +335,58 @@ class DestraProtocol:
             if size is None:
                 size = len(value_bytes)
         else:
-            print(f"Tipo de valor não suportado: {type(value)}")
+            self.logger.error(f"Tipo de valor não suportado: {type(value)}")
             return False
 
         # Validar parâmetros
         if not 0 <= address <= 0xFFFF:
-            print(f"Endereço inválido: {address:#06x} (deve ser 0-0xFFFF)")
+            self.logger.error(f"Endereço inválido: {address:#06x} (deve ser 0-0xFFFF)")
             return False
         if not 1 <= size <= 8:
-            print(f"Tamanho inválido: {size} (deve ser 1-8)")
+            self.logger.error(f"Tamanho inválido: {size} (deve ser 1-8)")
             return False
         if len(value_bytes) < size:
-            print(f"Bytes do valor ({len(value_bytes)}) menor que o tamanho solicitado ({size})")
+            self.logger.error(
+                f"Bytes do valor ({len(value_bytes)}) menor que o tamanho solicitado ({size})"
+            )
             return False
 
         try:
-            # Enviar palavra mágica
-            if not self._magic_word_check():
-                print("Verificação de palavra mágica falhou!")
-                return False
-
-            # Enviar comando POKE
-            self.ser.write(self.POKE_CMD)
-            echo = self.ser.read(1)
-            if echo != self.POKE_CMD:
-                print(
-                    f"Incompatibilidade de eco do comando: esperado {self.POKE_CMD.hex()}, recebido {echo.hex()}"
-                )
-                return False
-
-            # Enviar endereço (byte baixo primeiro para expectativa little-endian do Arduino)
-            address_bytes = address.to_bytes(2, "big")
-
-            # Enviar byte baixo
-            self.ser.write(bytes([address_bytes[1]]))
-            echo = self.ser.read(1)
-            if echo != bytes([address_bytes[1]]):
-                print("Incompatibilidade de eco do byte baixo do endereço")
-                return False
-
-            # Enviar byte alto
-            self.ser.write(bytes([address_bytes[0]]))
-            echo = self.ser.read(1)
-            if echo != bytes([address_bytes[0]]):
-                print("Incompatibilidade de eco do byte alto do endereço")
-                return False
-
-            # Enviar tamanho
-            self.ser.write(bytes([size]))
-            echo = self.ser.read(1)
-            if echo != bytes([size]):
-                print("Incompatibilidade de eco do tamanho")
-                return False
-            # Enviar bytes do valor
-            for i in range(size):
-                self.ser.write(bytes([value_bytes[i]]))
-                echo = self.ser.read(1)
-                if echo != bytes([value_bytes[i]]):
-                    print(f"Incompatibilidade de eco do byte {i} do valor")
-                    return False
-
-            # Ler cabeçalho da resposta
-            response_header = self.ser.read(4)  # CA FE F2 STATUS
-            if len(response_header) < 4:
-                print(f"Cabeçalho de resposta incompleto: {response_header.hex()}")
-                return False
-
-            # Verificar cabeçalho da resposta
-            if response_header[0:3] != b"\xca\xfe\xf2":  # Nota: F2 para POKE
-                print(f"Cabeçalho de resposta inválido: {response_header.hex()}")
-                return False
-
-            # Verificar status
-            status = response_header[3]
-            if status == self.STATUS_ADDRESS_RANGE_ERROR:
-                print(f"Erro de faixa de endereço: {address:#06x}")
-                return False
-            elif status == self.STATUS_SIZE_ERROR:
-                print(f"Erro de tamanho: {size}")
-                return False
-            elif status != self.STATUS_SUCCESS:
-                print(f"Status desconhecido: {status:#04x}")
-                return False
+            message: bytes = self._common_protocol_payload(self.POKE_CMD, address, size)
+            message += value_bytes
+            self.ser.write(message)
 
             # Ler de volta os dados de verificação (Arduino envia de volta o que foi escrito)
-            verify_data = self.ser.read(size)
-            if len(verify_data) != size:
-                print(f"Dados de verificação incompletos: esperado {size} bytes, recebido {len(verify_data)}")
-                return False
+            status, verify_data = self._common_protocol_response(
+                self.POKE_CMD, address, size
+            )
+            if status and verify_data:
+                # Verificar se os dados foram escritos corretamente
+                if verify_data != value_bytes[:size]:
+                    self.logger.error("Verificação falhou!")
+                    self.logger.error(
+                        f"  Enviado:     {' '.join(f'{b:02x}' for b in value_bytes[:size])}"
+                    )
+                    self.logger.error(
+                        f"  Lido de volta: {' '.join(f'{b:02x}' for b in verify_data)}"
+                    )
+                    return False
 
-            # Verificar se os dados foram escritos corretamente
-            if verify_data != value_bytes[:size]:
-                print("Verificação falhou!")
-                print(f"  Enviado:     {' '.join(f'{b:02x}' for b in value_bytes[:size])}")
-                print(f"  Lido de volta: {' '.join(f'{b:02x}' for b in verify_data)}")
-                return False
+                # Sucesso!
+                self.logger.debug(
+                    f"Poke bem-sucedido: endereço={address:#06x}, tamanho={size}"
+                )
+                self.logger.debug(
+                    f"Dados escritos: {' '.join(f'{b:02x}' for b in value_bytes[:size])}"
+                )
 
-            # Sucesso!
-            print(f"Poke bem-sucedido: endereço={address:#06x}, tamanho={size}")
-            print(f"Dados escritos: {' '.join(f'{b:02x}' for b in value_bytes[:size])}")
-            return True
+            return status
 
         except serial.SerialTimeoutException:
-            print("Timeout serial!")
+            self.logger.error("Timeout serial!")
             return False
         except Exception as e:
-            print(f"Erro durante poke: {e}")
+            self.logger.error(f"Erro durante poke: {e}")
             return False
 
 

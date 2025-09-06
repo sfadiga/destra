@@ -57,13 +57,14 @@ from PySide6.QtWidgets import (
     QSplitter,
     QGroupBox,
     QMessageBox,
-    QCheckBox
+    QCheckBox,
 )
 from PySide6.QtCore import Qt, QTimer
 
 # Importar o dicionário de dados ELF
 from data_dictionary import ElfDataDictionary, VariableInfo
 from destra import DestraProtocol
+from logger_config import DestraLogger
 
 
 class DestraGUI(QMainWindow):
@@ -73,14 +74,19 @@ class DestraGUI(QMainWindow):
         self.setGeometry(100, 100, 1200, 800)
         self.setStyleSheet("font: 600 14pt")
 
+        # Configurar logger
+        self.logger_manager = DestraLogger()
+        self.logger = self.logger_manager.logger.getChild("UI")
+
         # Armazenar o dicionário de dados ELF
         self.elf_data = None
         # Armazenar as variáveis do elf
-        self.all_variables = []  
+        self.all_variables = []
         self._variable_list: list[VariableInfo] = []
         self._destra: DestraProtocol = DestraProtocol()
         # port -> port.device ,  port.description
-        self._arduino_ports, self._other_ports = self._destra.auto_detect_arduino()
+        self._arduino_ports = []
+        self._other_ports = []
 
         # Criar widget central e layout principal
         central_widget = QWidget()
@@ -95,7 +101,7 @@ class DestraGUI(QMainWindow):
         main_layout.setStretch(0, 0)
         main_layout.setStretch(1, 0)
         main_layout.setStretch(2, 3)
-        #main_layout.setStretch(3, 0)
+        # main_layout.setStretch(3, 0)
 
         # Configurar timer para atualização periódica de portas COM
         self.auto_peek_timer = QTimer()
@@ -153,6 +159,14 @@ class DestraGUI(QMainWindow):
         self.sample_rate_spin.valueChanged.connect(self.change_auto_peek_freq)
         self.sample_rate_spin.setSuffix(" Hz")
         layout.addWidget(self.sample_rate_spin)
+
+        # Adicionar controle de nível de logging
+        layout.addWidget(QLabel("Log Level:"))
+        self.log_level_combo = QComboBox()
+        self.log_level_combo.addItems(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
+        self.log_level_combo.setCurrentText("ERROR")
+        self.log_level_combo.currentTextChanged.connect(self.change_log_level)
+        layout.addWidget(self.log_level_combo)
 
         layout.addStretch()
         group.setLayout(layout)
@@ -279,14 +293,14 @@ class DestraGUI(QMainWindow):
         parent_layout.addLayout(layout)
 
     def connect_to_arduino(self):
-        
+
         if self._is_connected:
             self._destra.disconnect()
             self.connect_button.setText("Conectar")
             self._is_connected = False
         else:
             com_port = self.com_port_combo.currentData()
-            #TODO adicionar widget de seleção de baud
+            # TODO adicionar widget de seleção de baud
             baudrate = 115200
             try:
                 self._destra.port = com_port
@@ -295,19 +309,26 @@ class DestraGUI(QMainWindow):
                 self._is_connected = True
                 self.connect_button.setText("Desconectar")
             except Exception as e:
-                QMessageBox.critical(self, "Erro", f"Erro ao conectar a porta {com_port}. {e}")
-                print(f"Porta COM inválida {e}")
+                QMessageBox.critical(
+                    self, "Erro", f"Erro ao conectar a porta {com_port}. {e}"
+                )
+                self.logger.error(f"Porta COM inválida: {e}")
 
     def start_stop_auto_peek(self, state: Qt.CheckState):
         if state == Qt.CheckState.Checked:
             self.auto_peek_timer.start((1 // self.sample_rate_spin.value()) * 1000)
         elif state == Qt.CheckState.Unchecked:
-             self.auto_peek_timer.stop()
+            self.auto_peek_timer.stop()
 
     def change_auto_peek_freq(self, value: int):
         if self.auto_peek_check.isChecked():
             self.auto_peek_timer.stop()
             self.auto_peek_timer.start((1 // value) * 1000)
+
+    def change_log_level(self, level: str):
+        """Alterar o nível de logging dinamicamente"""
+        self.logger_manager.set_level(level)
+        self.logger.info(f"Nível de logging alterado para: {level}")
 
     def on_poke_cell_edited(self, item):
         if item:
@@ -351,7 +372,10 @@ class DestraGUI(QMainWindow):
     def browse_file(self):
         """Abrir diálogo de arquivo para selecionar arquivo ELF"""
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Selecionar Arquivo ELF", "", "Arquivos ELF (*.elf);;Todos os Arquivos (*.*)"
+            self,
+            "Selecionar Arquivo ELF",
+            "C:/Users/sfadiga/Documents/Arduino/Destra/destra/arduino/sample/build/arduino.avr.uno/",
+            "Arquivos ELF (*.elf);;Todos os Arquivos (*.*)",
         )
 
         if file_path:
@@ -501,33 +525,41 @@ class DestraGUI(QMainWindow):
 
     def peek_values(self):
         """Obter valores peek para todas as variáveis selecionadas"""
-        # Aqui é onde você implementaria a funcionalidade real de peek
         for var_info in self._variable_list:
             data = self._destra.peek(var_info.address, var_info.size)
-            print(f"peek {data=}")
-            val = self._destra.decode_peek_data(data, var_info.base_type)
-            print(f"peek {val=}")
+            self.logger.debug(f"peek data={data}")
+            val = self._destra.decode_peek_data(data, var_info.base_type, var_info.size)
+            self.logger.debug(f"peek val={val}")
             # Verificar se já está na tabela selecionada
             for i in range(self.selected_table.rowCount()):
                 if self.selected_table.item(i, 0).text() == var_info.name:
-                    self.selected_table.item(i, 1).setData(Qt.ItemDataRole.DisplayRole, val)
+                    self.selected_table.item(i, 1).setData(
+                        Qt.ItemDataRole.DisplayRole, val
+                    )
 
     def poke_values(self):
         """Enviar valores poke para todas as variáveis selecionadas"""
-        # Aqui é onde você implementaria a funcionalidade real de poke
-        print("Botão Poke clicado")
-        name_val = {}
+        self.logger.debug("Botão Poke clicado")
         for var_info in self._variable_list:
             for i in range(self.selected_table.rowCount()):
                 if self.selected_table.item(i, 0).text() == var_info.name:
-                    val_txt = self.selected_table.item(i, 2).text() #  setData(Qt.ItemDataRole.DisplayRole, val)
+                    val_txt = self.selected_table.item(i, 2).text()
                     val = self._text_2_num(val_txt)
                     if val:
                         state = self._destra.poke(var_info.address, var_info.size, val)
                         if state:
-                            self.selected_table.item(i, 2).setBackground(Qt.GlobalColor.darkGreen)
+                            self.selected_table.item(i, 2).setBackground(
+                                Qt.GlobalColor.darkGreen
+                            )
+                            self.logger.info(
+                                f"Poke bem-sucedido: {var_info.name} = {val}"
+                            )
                         else:
-                            self.selected_table.item(i, 2).setBackground(Qt.GlobalColor.darkRed)
+                            self.selected_table.item(i, 2).setBackground(
+                                Qt.GlobalColor.darkRed
+                            )
+                            self.logger.warning(f"Poke falhou: {var_info.name}")
+
 
 def main():
     app = QApplication(sys.argv)
