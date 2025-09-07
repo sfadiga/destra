@@ -54,8 +54,10 @@ class DestraLogger:
         self.logger = logging.getLogger("DESTRA")
         self.logger.setLevel(logging.DEBUG)  # Capturar todos os níveis
 
-        # Remover handlers existentes para evitar duplicação
-        self.logger.handlers.clear()
+        # Fechar e remover handlers existentes para evitar memory leak
+        for handler in self.logger.handlers[:]:
+            handler.close()
+            self.logger.removeHandler(handler)
 
         # Formato das mensagens
         formatter = logging.Formatter(

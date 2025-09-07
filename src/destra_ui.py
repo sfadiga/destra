@@ -316,14 +316,16 @@ class DestraGUI(QMainWindow):
 
     def start_stop_auto_peek(self, state: Qt.CheckState):
         if state == Qt.CheckState.Checked:
-            self.auto_peek_timer.start((1 // self.sample_rate_spin.value()) * 1000)
+            interval_ms = int(1000.0 / self.sample_rate_spin.value())
+            self.auto_peek_timer.start(interval_ms)
         elif state == Qt.CheckState.Unchecked:
             self.auto_peek_timer.stop()
 
     def change_auto_peek_freq(self, value: int):
         if self.auto_peek_check.isChecked():
             self.auto_peek_timer.stop()
-            self.auto_peek_timer.start((1 // value) * 1000)
+            interval_ms = int(1000.0 / value)
+            self.auto_peek_timer.start(interval_ms)
 
     def change_log_level(self, level: str):
         """Alterar o nível de logging dinamicamente"""
@@ -525,10 +527,17 @@ class DestraGUI(QMainWindow):
 
     def peek_values(self):
         """Obter valores peek para todas as variáveis selecionadas"""
+        # Verificar se está conectado antes de executar peek
+        if not self._is_connected:
+            QMessageBox.warning(
+                self, "Aviso", "Por favor, conecte-se ao Arduino primeiro!"
+            )
+            return
+            
         for var_info in self._variable_list:
             data = self._destra.peek(var_info.address, var_info.size)
             self.logger.debug(f"peek data={data}")
-            val = self._destra.decode_peek_data(data, var_info.base_type, var_info.size)
+            val = self._destra.decode_peek_data(data, var_info.base_type)
             self.logger.debug(f"peek val={val}")
             # Verificar se já está na tabela selecionada
             for i in range(self.selected_table.rowCount()):
@@ -539,6 +548,13 @@ class DestraGUI(QMainWindow):
 
     def poke_values(self):
         """Enviar valores poke para todas as variáveis selecionadas"""
+        # Verificar se está conectado antes de executar poke
+        if not self._is_connected:
+            QMessageBox.warning(
+                self, "Aviso", "Por favor, conecte-se ao Arduino primeiro!"
+            )
+            return
+            
         self.logger.debug("Botão Poke clicado")
         for var_info in self._variable_list:
             for i in range(self.selected_table.rowCount()):
