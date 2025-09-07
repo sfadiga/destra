@@ -257,4 +257,4 @@ Curso de Especialização em Sistemas Aeronáuticos (2024)
 
 ---
 
-*Última atualização: Janeiro 2025*
+*Última atualização: Setembro 2025*
