@@ -231,7 +231,9 @@ class DestraProtocol:
 
         try:
             message: bytes = self._common_protocol_payload(self.PEEK_CMD, address, size)
+            self.logger.debug(f"Pacote Peek a ser enviado: {message.hex().upper()}")
             self.ser.write(message)
+
             status, data = self._common_protocol_response(self.PEEK_CMD, address, size)
             if status and data:
                 # Sucesso! Retornar os dados
@@ -354,6 +356,7 @@ class DestraProtocol:
         try:
             message: bytes = self._common_protocol_payload(self.POKE_CMD, address, size)
             message += value_bytes
+            self.logger.debug(f"Pacote Poke a ser enviado: {message.hex().upper()}")
             self.ser.write(message)
 
             # Ler de volta os dados de verificação (Arduino envia de volta o que foi escrito)

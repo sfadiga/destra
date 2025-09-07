@@ -158,9 +158,12 @@ void destraHandler() {
         break;
 
       case WAIT_VALUE:
-        // Armazenar o byte de valor
-        destraValueBuffer[destraValueIndex] = inByte;
-        destraValueIndex++;
+        // Verificar se o índice está dentro dos limites do buffer
+        if (destraValueIndex < 8 && destraValueIndex < destraSize) {
+          // Armazenar o byte de valor
+          destraValueBuffer[destraValueIndex] = inByte;
+          destraValueIndex++;
+        }
         // Verificar se recebemos todos os bytes de valor
         if (destraValueIndex >= destraSize) {
           destraState = PROCESS_REQUEST;
