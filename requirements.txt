@@ -4,3 +4,7 @@ PySide6
 pyreadline3
 rich
 pyinstaller
+numpy
+matplotlib
+pandas
+scipy

@@ -85,8 +85,8 @@ if errorlevel 1 (
 echo.
 
 :: Verifica se o arquivo requirements.txt existe
-if not exist "src\requirements.txt" (
-    echo [ERRO] Arquivo 'src\requirements.txt' nao encontrado!
+if not exist "requirements.txt" (
+    echo [ERRO] Arquivo 'requirements.txt' nao encontrado!
     pause
     exit /b 1
 )
@@ -94,7 +94,7 @@ if not exist "src\requirements.txt" (
 :: Instala/atualiza as dependências
 echo [INFO] Instalando/atualizando dependencias...
 echo.
-pip install -r src\requirements.txt
+pip install -r requirements.txt
 if errorlevel 1 (
     echo.
     echo [ERRO] Falha ao instalar dependencias!
