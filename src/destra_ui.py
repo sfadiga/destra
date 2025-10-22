@@ -40,6 +40,7 @@ Licença: MIT
 """
 
 import sys
+import time
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -68,6 +69,10 @@ from logger_config import DestraLogger
 
 
 class DestraGUI(QMainWindow):
+
+    PERF_DUMP_FILE = "./tests/destra_ui_{freq}hz.log"
+    ARDUINO_DUMP_FILE = "./tests/arduino_{freq}hz.log"
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("DEpurador de Sistemas em Tempo ReAl - DESTRA")
@@ -87,6 +92,7 @@ class DestraGUI(QMainWindow):
         # port -> port.device ,  port.description
         self._arduino_ports = []
         self._other_ports = []
+        self._current_log = []
 
         # Criar widget central e layout principal
         central_widget = QWidget()
@@ -167,6 +173,11 @@ class DestraGUI(QMainWindow):
         self.log_level_combo.setCurrentText("ERROR")
         self.log_level_combo.currentTextChanged.connect(self.change_log_level)
         layout.addWidget(self.log_level_combo)
+
+        self.dump_button = QPushButton("Baixar logs")
+        self.dump_button.setMinimumWidth(150)
+        self.dump_button.clicked.connect(self.dump_performance_logs)
+        layout.addWidget(self.dump_button)
 
         layout.addStretch()
         group.setLayout(layout)
@@ -323,6 +334,7 @@ class DestraGUI(QMainWindow):
 
     def change_auto_peek_freq(self, value: int):
         if self.auto_peek_check.isChecked():
+            self._current_log = []
             self.auto_peek_timer.stop()
             interval_ms = int(1000.0 / value)
             self.auto_peek_timer.start(interval_ms)
@@ -532,10 +544,14 @@ class DestraGUI(QMainWindow):
             QMessageBox.warning(
                 self, "Aviso", "Por favor, conecte-se ao Arduino primeiro!"
             )
+            self.auto_peek_check.setChecked(False)
             return
-            
+
         for var_info in self._variable_list:
+            start = time.perf_counter()
             data = self._destra.peek(var_info.address, var_info.size)
+            end = time.perf_counter()
+            self.log_performance("PEEK", str(var_info.address), str(var_info.size), end - start)
             self.logger.debug(f"peek data={data}")
             val = self._destra.decode_peek_data(data, var_info.base_type)
             self.logger.debug(f"peek val={val}")
@@ -554,7 +570,7 @@ class DestraGUI(QMainWindow):
                 self, "Aviso", "Por favor, conecte-se ao Arduino primeiro!"
             )
             return
-            
+
         self.logger.debug("Botão Poke clicado")
         for var_info in self._variable_list:
             for i in range(self.selected_table.rowCount()):
@@ -562,27 +578,47 @@ class DestraGUI(QMainWindow):
                     val_txt = self.selected_table.item(i, 2).text()
                     val = self._text_2_num(val_txt)
                     if val:
+                        start = time.perf_counter()
                         state = self._destra.poke(var_info.address, var_info.size, val)
+                        end = time.perf_counter()
+                        self.log_performance("POKE", str(var_info.address), str(var_info.size), end - start)
                         if state:
-                            self.selected_table.item(i, 2).setBackground(
-                                Qt.GlobalColor.darkGreen
-                            )
-                            self.logger.info(
-                                f"Poke bem-sucedido: {var_info.name} = {val}"
-                            )
+                            self.selected_table.item(i, 2).setBackground(Qt.GlobalColor.darkGreen)
+                            self.logger.info(f"Poke bem-sucedido: {var_info.name} = {val}")
                         else:
-                            self.selected_table.item(i, 2).setBackground(
-                                Qt.GlobalColor.darkRed
-                            )
+                            self.selected_table.item(i, 2).setBackground(Qt.GlobalColor.darkRed)
                             self.logger.warning(f"Poke falhou: {var_info.name}")
 
+    def dump_performance_logs(self):
+        """Solicitar ao Arduino o envio dos logs armazenados"""
+        if not self._is_connected:
+            QMessageBox.warning(self, "Aviso", "Por favor, conecte-se ao Arduino primeiro!")
+            return
+        try:
+            dump = self._destra.performance()
+            rate = self.sample_rate_spin.value()
+            current_dump_file = self.PERF_DUMP_FILE.format(freq=rate)
+            current_arduino_file = self.ARDUINO_DUMP_FILE.format(freq=rate)
+            with open(current_arduino_file, mode="w", encoding="utf-8") as file:
+                file.writelines([f"{d}\n" for d in dump])
+            with open(current_dump_file, mode="a", encoding="utf-8") as file:
+                file.writelines(self._current_log)
+            self._current_log = []
+
+        except Exception as e:
+            QMessageBox.critical(self, "Erro", f"Falha ao baixar dados de performance: {e}")
+            self.logger.error(f"Erro ao baixar dados de performance: {e}")
+
+    def log_performance(self, command: str, address: str, size: str, latency: float):
+        #adjust latency value to match arduinos unit usecods
+        lat = latency * 1_000_000
+        self._current_log.append(f"cmd={command},addr={address},size={size},latency={lat},timestamp={time.perf_counter()}\n")
 
 def main():
     app = QApplication(sys.argv)
     window = DestraGUI()
     window.show()
     sys.exit(app.exec())
-
 
 if __name__ == "__main__":
     main()

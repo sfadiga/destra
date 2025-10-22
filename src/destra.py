@@ -32,6 +32,7 @@ Dependências:
 
 Licença: MIT
 """
+from dataclasses import dataclass
 import time
 from typing import Optional, Union, List
 import struct
@@ -43,6 +44,17 @@ from logger_config import DestraLogger
 
 from data_dictionary import DecodedTypes
 
+@dataclass
+class PerformanceData:
+    frame_counter: int
+    frame_rate: int
+    frame_jitter_us: int
+    command_sequence: int
+    command_counter_delta: int
+    command_process_time_us: int
+
+    def __str__(self) -> str:
+        return f"frame_counter: {self.frame_counter}, frame_rate:{self.frame_rate}, frame_jitter_us:{self.frame_jitter_us}, command_sequence:{self.command_sequence}, command_counter_delta:{self.command_counter_delta}, command_process_time_us:{self.command_process_time_us}"
 
 class DestraProtocol:
     """DEpurador de Sistemas em Tempo ReAl - Protocolo"""
@@ -53,6 +65,7 @@ class DestraProtocol:
     MAGIC_FE = bytes.fromhex("FE")
     PEEK_CMD = bytes.fromhex("F1")
     POKE_CMD = bytes.fromhex("F2")
+    PERF_CMD = bytes.fromhex("F3") 
 
     # Códigos de status
     STATUS_SUCCESS = 0x00
@@ -177,7 +190,7 @@ class DestraProtocol:
             return False, None
 
         # Verificar cabeçalho da resposta
-        if response_header[0:3] != b"\xca\xfe" + command:  # Nota: F2 para POKE
+        if response_header[0:3] != b"\xca\xfe" + command: 
             self.logger.error(
                 f"Cabeçalho de resposta inválido: {response_header.hex()}"
             )
@@ -358,7 +371,6 @@ class DestraProtocol:
             message += value_bytes
             self.logger.debug(f"Pacote Poke a ser enviado: {message.hex().upper()}")
             self.ser.write(message)
-
             # Ler de volta os dados de verificação (Arduino envia de volta o que foi escrito)
             status, verify_data = self._common_protocol_response(
                 self.POKE_CMD, address, size
@@ -374,7 +386,6 @@ class DestraProtocol:
                         f"  Lido de volta: {' '.join(f'{b:02x}' for b in verify_data)}"
                     )
                     return False
-
                 # Sucesso!
                 self.logger.debug(
                     f"Poke bem-sucedido: endereço={address:#06x}, tamanho={size}"
@@ -382,7 +393,6 @@ class DestraProtocol:
                 self.logger.debug(
                     f"Dados escritos: {' '.join(f'{b:02x}' for b in value_bytes[:size])}"
                 )
-
             return status
 
         except serial.SerialTimeoutException:
@@ -392,6 +402,68 @@ class DestraProtocol:
             self.logger.error(f"Erro durante poke: {e}")
             return False
 
+    def performance(self) -> list[PerformanceData]:
+        """
+        Enviar uma requisição para o protocolo de teste (extra ao protocolo DESTRA) fazer o dump dos logs de performance.
+        Returns:
+            objeto bytes com o conteúdo da memória, ou None se falhou
+        """
+        samples = []
+        if not self.ser or not self.ser.is_open:
+            self.logger.error("Não conectado!")
+            return samples
+        try:
+            message: bytes = struct.pack(">c", self.MAGIC_CA)
+            message += struct.pack(">c", self.MAGIC_FE)
+            message += struct.pack(">c", self.PERF_CMD)
+            self.logger.debug(f"Pacote Dump a ser enviado: {message.hex().upper()}")
+            self.ser.write(message)
+
+            self.logger.info("=== DUMP DE LOGS (Arduino) ===")
+
+            # Ler cabeçalho da resposta
+            response_header = self.ser.read(5)  # CA FE F3 STATUS LOG_SIZE
+            if len(response_header) < 5:
+                self.logger.error(
+                    f"Cabeçalho de resposta incompleto: {response_header.hex()}"
+                )
+                return samples
+            # Verificar cabeçalho da resposta
+            if response_header[0:3] != b"\xca\xfe" + self.PERF_CMD:
+                self.logger.error(
+                    f"Cabeçalho de resposta inválido: {response_header.hex()}"
+                )
+                return samples
+
+            # Verificar status
+            status = response_header[3]
+            if status != self.STATUS_SUCCESS:
+                self.logger.error(f"Status desconhecido: {status:#04x}")
+                return samples
+            # Quantas entradas de performance estão retornando
+            perf_entries = response_header[4]
+            self.logger.info(f"Processando um total de {perf_entries} entradas.")
+            if not 0 < perf_entries < 256:
+                self.logger.error(
+                    f"Cabeçalho de resposta inválid perf_entries: {perf_entries}"
+                )
+                return samples
+
+            for i in range(perf_entries):
+                frame_counter = int.from_bytes(self.ser.read(4), "little")
+                frame_rate = int.from_bytes(self.ser.read(2), "little")
+                frame_jitter_us = int.from_bytes(self.ser.read(2), "little")
+                command_sequence = int.from_bytes(self.ser.read(2), "little")
+                command_counter_delta = int.from_bytes(self.ser.read(2), "little")
+                command_process_time_us = int.from_bytes(self.ser.read(4), "little")
+                perf = PerformanceData(frame_counter, frame_rate, frame_jitter_us, command_sequence, command_counter_delta, command_process_time_us)
+                samples.append(perf)
+            self.logger.info("=== FIM DO DUMP ===\n")
+        except serial.SerialTimeoutException:
+            self.logger.error("Timeout serial!")
+        except Exception as e:
+            self.logger.error(f"Erro durante peek: {e}", exc_info=True)
+        return samples
 
 def main():
     """Função principal para executar o teste de eco"""
