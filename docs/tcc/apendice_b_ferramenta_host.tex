@@ -1,0 +1,1455 @@
+% ============================================================================
+% APÊNDICE B - FERRAMENTA HOST DESTRA UI
+% ============================================================================
+\chapter{Ferramenta Host DESTRA UI}
+
+\section{Módulo de Protocolo - destra.py}
+
+Este apêndice apresenta a implementação completa da ferramenta host DESTRA UI, desenvolvida em Python para comunicação com o protocolo Arduino e analise de arquivos ELF.
+
+\subsection{Protocolo de Comunicação}
+
+\begin{lstlisting}[language=Python, caption={Módulo destra.py - Protocolo de comunicação DESTRA}, label=lst:destra_py, basicstyle=\tiny\ttfamily, breaklines=true, numbers=left, numberstyle=\tiny, stepnumber=1, showstringspaces=false]
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Arquivo: destra.py
+Autor: Sandro Fadiga
+Instituicao: EESC - USP (Escola de Engenharia de Sao Carlos)
+Projeto: DESTRA - DEpurador de Sistemas em Tempo ReAl
+Data de Criacao: 09/01/2025
+Versao: 1.0
+
+Descricao:
+    Implementacao do protocolo de comunicacao DESTRA para depuracao em tempo real
+    de sistemas embarcados Arduino. Este modulo fornece as funcionalidades de
+    peek/poke para leitura e escrita de memoria via comunicacao serial.
+
+Funcionalidades:
+    - Auto-deteccao de portas Arduino
+    - Comunicacao serial com protocolo customizado
+    - Operacoes peek (leitura de memoria)
+    - Operacoes poke (escrita de memoria)
+    - Decodificacao de tipos de dados (int, float, string, etc.)
+    - Verificacao de integridade com palavras magicas
+
+Protocolo:
+    - Palavras magicas: 0xCA 0xFE
+    - Comandos: PEEK (0xF1), POKE (0xF2)
+    - Suporte para enderecos de 16 bits
+    - Transferencia de 1-8 bytes por operacao
+
+Dependencias:
+    - pyserial: Para comunicacao serial
+
+Licenca: MIT
+"""
+from dataclasses import dataclass
+import time
+from typing import Optional, Union, List
+import struct
+
+import serial
+import serial.tools.list_ports
+
+from logger_config import DestraLogger
+
+from data_dictionary import DecodedTypes
+
+@dataclass
+class PerformanceData:
+    frame_counter: int
+    frame_rate: int
+    frame_jitter_us: int
+    command_sequence: int
+    command_counter_delta: int
+    command_process_time_us: int
+
+    def __str__(self) -> str:
+        return f"frame_counter: {self.frame_counter}, frame_rate:{self.frame_rate}, frame_jitter_us:{self.frame_jitter_us}, command_sequence:{self.command_sequence}, command_counter_delta:{self.command_counter_delta}, command_process_time_us:{self.command_process_time_us}"
+
+class DestraProtocol:
+    """DEpurador de Sistemas em Tempo ReAl - Protocolo"""
+
+    # PROTOCOLO
+    # PALAVRA MAGICA
+    MAGIC_CA = bytes.fromhex("CA")
+    MAGIC_FE = bytes.fromhex("FE")
+    PEEK_CMD = bytes.fromhex("F1")
+    POKE_CMD = bytes.fromhex("F2")
+    PERF_CMD = bytes.fromhex("F3") 
+
+    # Codigos de status
+    STATUS_SUCCESS = 0x00
+    STATUS_ADDRESS_RANGE_ERROR = 0x01
+    STATUS_SIZE_ERROR = 0x02
+
+    def __init__(self, port: Optional[str] = None, baudrate: int = 115200):
+        # Usar configuracao serial padrao 8N1 (sem paridade)
+        self.ser = None
+        self.baudrate = baudrate
+        self.port = port
+        self.ser = None
+
+        # Configurar logger
+        logger_manager = DestraLogger()
+        self.logger = logger_manager.logger.getChild("Protocol")
+
+    def auto_detect_arduino(self) -> tuple[List, List]:
+        """Auto-detectar porta COM do Arduino"""
+        self.logger.info("Auto-detectando porta do Arduino...")
+        ports = serial.tools.list_ports.comports()
+
+        arduino_ports = []
+        other_ports = []
+        for port in ports:
+            # Verificar identificadores comuns do Arduino
+            if any(
+                x in port.description.lower()
+                for x in ["arduino", "ch340", "ft232", "cp210"]
+            ):
+                arduino_ports.append(port)
+                self.logger.debug(
+                    f"Arduino potencial encontrado: {port.device} - {port.description}"
+                )
+
+        if not arduino_ports:
+            self.logger.warning("Nenhum Arduino detectado. Portas disponiveis:")
+            for port in ports:
+                other_ports.append(port)
+                self.logger.debug(f"  {port.device} - {port.description}")
+
+        if len(arduino_ports) > 1:
+            self.logger.info(
+                f"Multiplos Arduinos encontrados. Usando o primeiro: {arduino_ports[0]}"
+            )
+
+        return arduino_ports, other_ports
+
+    def connect(self) -> bool:
+        """Conectar ao Arduino"""
+        try:
+            self.logger.info(f"Conectando a {self.port} em {self.baudrate} baud...")
+
+            # Abrir conexao serial com configuracoes padrao 8N1
+            self.ser = serial.Serial(
+                port=self.port,
+                baudrate=self.baudrate,
+                bytesize=serial.EIGHTBITS,
+                parity=serial.PARITY_NONE,
+                stopbits=serial.STOPBITS_ONE,
+                timeout=2.0,
+                write_timeout=2.0,
+            )
+
+            # Limpar qualquer dado pendente
+            self.ser.reset_input_buffer()
+            self.ser.reset_output_buffer()
+
+            # Aguardar o Arduino reiniciar (se ele reinicia na conexao serial)
+            time.sleep(2)
+
+            # Verificar mensagem de inicializacao
+            if self.ser.in_waiting > 0:
+                startup_msg = self.ser.readline().decode("utf-8").strip()
+                self.logger.debug(f"Arduino diz: {startup_msg}")
+                if "ECHO_TEST_READY" in startup_msg:
+                    self.logger.info("Arduino esta pronto!")
+                    return True
+
+            self.logger.info("Conectado com sucesso!")
+            return True
+
+        except serial.SerialException as e:
+            self.logger.error(f"Falha ao conectar: {e}")
+            return False
+
+    def disconnect(self):
+        """Desconectar do Arduino"""
+        if self.ser and self.ser.is_open:
+            self.ser.close()
+            self.logger.info("Desconectado do Arduino")
+
+    def _common_protocol_payload(
+        self, command: bytes, address: int, size: int
+    ) -> bytes:
+        """
+        Constroi a parte comum ao pacote serial para ser enviado nos comandos
+        """
+        # Constroi a palavra magica, comando, endereco e tamanho, tansfere tudo num so write
+        message: bytes = struct.pack(">c", self.MAGIC_CA)
+        message += struct.pack(">c", self.MAGIC_FE)
+        message += struct.pack(">c", command)
+        addr_low = address & 0xFF  # extrai os 8 bits
+        addr_high = (address >> 8) & 0xFF  # extrai os 8 bits
+        message += struct.pack(">B", addr_low)
+        message += struct.pack(">B", addr_high)
+        message += struct.pack(">B", size)
+        return message
+
+    def _common_protocol_response(
+        self, command: bytes, address: int = 0, size: int = 0
+    ) -> tuple[bool, bytes | None]:
+        if not self.ser:
+            return False, None
+
+        # Ler cabecalho da resposta
+        response_header = self.ser.read(4)  # CA FE F2 STATUS
+        if len(response_header) < 4:
+            self.logger.error(
+                f"Cabecalho de resposta incompleto: {response_header.hex()}"
+            )
+            return False, None
+
+        # Verificar cabecalho da resposta
+        if response_header[0:3] != b"\xca\xfe" + command: 
+            self.logger.error(
+                f"Cabecalho de resposta invalido: {response_header.hex()}"
+            )
+            return False, None
+
+        # Verificar status
+        status = response_header[3]
+        if status == self.STATUS_ADDRESS_RANGE_ERROR:
+            self.logger.error(f"Erro de faixa de endereco: {address:#06x}")
+            return False, None
+        if status == self.STATUS_SIZE_ERROR:
+            self.logger.error(f"Erro de tamanho: {size}")
+            return False, None
+        if status != self.STATUS_SUCCESS:
+            self.logger.error(f"Status desconhecido: {status:#04x}")
+            return False, None
+
+        # Ler os dados
+        data = self.ser.read(size)
+        if len(data) != size:
+            self.logger.error(
+                f"Dados incompletos: esperado {size} bytes, recebido {len(data)}"
+            )
+            return False, data
+
+        return True, data
+
+    def peek(self, address: int, size: int) -> Optional[bytes]:
+        """
+        Enviar uma requisicao peek e retornar o conteudo da memoria no endereco especificado.
+
+        Args:
+            address: Endereco de memoria para ler (16-bit)
+            size: Numero de bytes para ler (1-8)
+
+        Returns:
+            objeto bytes com o conteudo da memoria, ou None se falhou
+        """
+        if not self.ser or not self.ser.is_open:
+            self.logger.error("Nao conectado!")
+            return None
+
+        # Validar parametros
+        if not 0 <= address <= 0xFFFF:
+            self.logger.error(f"Endereco invalido: {address:#06x} (deve ser 0-0xFFFF)")
+            return None
+
+        if not 1 <= size <= 8:
+            self.logger.error(f"Tamanho invalido: {size} (deve ser 1-8)")
+            return None
+
+        try:
+            message: bytes = self._common_protocol_payload(self.PEEK_CMD, address, size)
+            self.logger.debug(f"Pacote Peek a ser enviado: {message.hex().upper()}")
+            self.ser.write(message)
+
+            status, data = self._common_protocol_response(self.PEEK_CMD, address, size)
+            if status and data:
+                # Sucesso! Retornar os dados
+                self.logger.debug(
+                    f"Peek bem-sucedido: endereco={address:#06x}, tamanho={size}"
+                )
+                self.logger.debug(f"Dados (hex): {' '.join(f'{b:02x}' for b in data)}")
+            return data
+        except serial.SerialTimeoutException:
+            self.logger.error("Timeout serial!")
+            return None
+        except Exception as e:
+            self.logger.error(f"Erro durante peek: {e}", exc_info=True)
+            return None
+
+    def decode_peek_data(
+        self, data: Optional[bytes], data_type: str
+    ) -> Union[float, int, bytes, str, None]:
+        """
+        Decodificar os bytes brutos do peek em varios tipos de dados.
+
+        Args:
+            data: Bytes brutos da operacao peek
+            data_type: Tipo para decodificar, disponiveis em Data Dictionary / Decode Types
+
+        Returns:
+            Valor decodificado no tipo especificado
+        """
+        try:
+            if not data:
+                raise ValueError("Dados invalidos para decodificar peek")
+
+            decoded = DecodedTypes.decode_type(data_type)
+            if not decoded:
+                raise ValueError(f"Tipo de dados desconhecido: {data_type}")
+
+            fmt, size = decoded
+
+            if len(data) < size:
+                raise ValueError(f"Precisa de pelo menos {size} byte para {data_type}")
+
+            return struct.unpack(fmt, data[:size])[0]
+
+        except struct.error as e:
+            self.logger.error(f"Erro de desempacotamento de struct: {e}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Erro de decodificacao: {e}")
+            return None
+
+    def poke(
+        self, address: int, size: Optional[int], value: Union[float, int, bytes]
+    ) -> bool:
+        """
+        Escrever dados na memoria do Arduino no endereco especificado.
+
+        Args:
+            address: Endereco de memoria para escrever (16-bit)
+            value: Dados para escrever. Pode ser:
+                - objeto bytes
+                - int (sera convertido baseado no tamanho)
+                - float (sera convertido para 4 bytes)
+            size: Numero de bytes para escrever (1-8). Se None, usa len(value)
+
+        Returns:
+            True se bem-sucedido, False caso contrario
+        """
+        if not self.ser or not self.ser.is_open:
+            self.logger.error("Nao conectado!")
+            return False
+
+        # Converter valor para bytes se necessario
+        if isinstance(value, int):
+            if size is None:
+                # Determinar tamanho baseado no valor
+                if -128 <= value <= 255:
+                    size = 1
+                elif -32768 <= value <= 65535:
+                    size = 2
+                else:
+                    size = 4
+
+            # Converter para bytes (little-endian para Arduino)
+            if size == 1:
+                value_bytes = struct.pack("<B" if value >= 0 else "<b", value)
+            elif size == 2:
+                value_bytes = struct.pack("<H" if value >= 0 else "<h", value)
+            elif size == 4:
+                value_bytes = struct.pack("<I" if value >= 0 else "<i", value)
+            else:
+                self.logger.error(f"Tamanho invalido {size} para valor inteiro")
+                return False
+
+        elif isinstance(value, float):
+            value_bytes = struct.pack("<f", value)  # 4 bytes, little-endian
+            if size is None:
+                size = 4
+
+        elif isinstance(value, bytes):
+            value_bytes = value
+            if size is None:
+                size = len(value_bytes)
+        else:
+            self.logger.error(f"Tipo de valor nao suportado: {type(value)}")
+            return False
+
+        # Validar parametros
+        if not 0 <= address <= 0xFFFF:
+            self.logger.error(f"Endereco invalido: {address:#06x} (deve ser 0-0xFFFF)")
+            return False
+        if not 1 <= size <= 8:
+            self.logger.error(f"Tamanho invalido: {size} (deve ser 1-8)")
+            return False
+        if len(value_bytes) < size:
+            self.logger.error(
+                f"Bytes do valor ({len(value_bytes)}) menor que o tamanho solicitado ({size})"
+            )
+            return False
+
+        try:
+            message: bytes = self._common_protocol_payload(self.POKE_CMD, address, size)
+            message += value_bytes
+            self.logger.debug(f"Pacote Poke a ser enviado: {message.hex().upper()}")
+            self.ser.write(message)
+            # Ler de volta os dados de verificacao (Arduino envia de volta o que foi escrito)
+            status, verify_data = self._common_protocol_response(
+                self.POKE_CMD, address, size
+            )
+            if status and verify_data:
+                # Verificar se os dados foram escritos corretamente
+                if verify_data != value_bytes[:size]:
+                    self.logger.error("Verificacao falhou!")
+                    self.logger.error(
+                        f"  Enviado:     {' '.join(f'{b:02x}' for b in value_bytes[:size])}"
+                    )
+                    self.logger.error(
+                        f"  Lido de volta: {' '.join(f'{b:02x}' for b in verify_data)}"
+                    )
+                    return False
+                # Sucesso!
+                self.logger.debug(
+                    f"Poke bem-sucedido: endereco={address:#06x}, tamanho={size}"
+                )
+                self.logger.debug(
+                    f"Dados escritos: {' '.join(f'{b:02x}' for b in value_bytes[:size])}"
+                )
+            return status
+
+        except serial.SerialTimeoutException:
+            self.logger.error("Timeout serial!")
+            return False
+        except Exception as e:
+            self.logger.error(f"Erro durante poke: {e}")
+            return False
+
+    def performance(self) -> list[PerformanceData]:
+        """
+        Enviar uma requisicao para o protocolo de teste (extra ao protocolo DESTRA) fazer o dump dos logs de performance.
+        Returns:
+            objeto bytes com o conteudo da memoria, ou None se falhou
+        """
+        samples = []
+        if not self.ser or not self.ser.is_open:
+            self.logger.error("Nao conectado!")
+            return samples
+        try:
+            message: bytes = struct.pack(">c", self.MAGIC_CA)
+            message += struct.pack(">c", self.MAGIC_FE)
+            message += struct.pack(">c", self.PERF_CMD)
+            self.logger.debug(f"Pacote Dump a ser enviado: {message.hex().upper()}")
+            self.ser.write(message)
+
+            self.logger.info("=== DUMP DE LOGS (Arduino) ===")
+
+            # Ler cabecalho da resposta
+            response_header = self.ser.read(5)  # CA FE F3 STATUS LOG_SIZE
+            if len(response_header) < 5:
+                self.logger.error(
+                    f"Cabecalho de resposta incompleto: {response_header.hex()}"
+                )
+                return samples
+            # Verificar cabecalho da resposta
+            if response_header[0:3] != b"\xca\xfe" + self.PERF_CMD:
+                self.logger.error(
+                    f"Cabecalho de resposta invalido: {response_header.hex()}"
+                )
+                return samples
+
+            # Verificar status
+            status = response_header[3]
+            if status != self.STATUS_SUCCESS:
+                self.logger.error(f"Status desconhecido: {status:#04x}")
+                return samples
+            # Quantas entradas de performance estao retornando
+            perf_entries = response_header[4]
+            self.logger.info(f"Processando um total de {perf_entries} entradas.")
+            if not 0 < perf_entries < 256:
+                self.logger.error(
+                    f"Cabecalho de resposta invalid perf_entries: {perf_entries}"
+                )
+                return samples
+
+            for i in range(perf_entries):
+                frame_counter = int.from_bytes(self.ser.read(4), "little")
+                frame_rate = int.from_bytes(self.ser.read(2), "little")
+                frame_jitter_us = int.from_bytes(self.ser.read(2), "little")
+                command_sequence = int.from_bytes(self.ser.read(2), "little")
+                command_counter_delta = int.from_bytes(self.ser.read(2), "little")
+                command_process_time_us = int.from_bytes(self.ser.read(4), "little")
+                perf = PerformanceData(frame_counter, frame_rate, frame_jitter_us, command_sequence, command_counter_delta, command_process_time_us)
+                samples.append(perf)
+            self.logger.info("=== FIM DO DUMP ===\n")
+        except serial.SerialTimeoutException:
+            self.logger.error("Timeout serial!")
+        except Exception as e:
+            self.logger.error(f"Erro durante peek: {e}", exc_info=True)
+        return samples
+
+def main():
+    """Funcao principal para executar o teste de eco"""
+    import sys
+
+    # Verificar argumentos da linha de comando
+    port = None
+    if len(sys.argv) > 1:
+        port = sys.argv[1]
+        print(f"Usando porta especificada: {port}")
+
+    try:
+        # Criar instancia de teste
+        protocol = DestraProtocol(port=port)
+
+        if not protocol.connect():
+            print("\nFalha ao conectar ao Arduino!")
+            return
+
+        # Permitir que o Arduino estabilize
+        time.sleep(0.5)
+
+        # Executar todos os testes
+        data = protocol.peek(int(0x012F), 4)
+        val = protocol.decode_peek_data(data, "uint32")
+        print(f" {val=}")
+    except Exception as e:
+        print(f"\nErro: {e}")
+        print("\nUso: python test_serial.py [PORTA_COM]")
+        print("  Exemplo: python test_serial.py COM3")
+        print("  Se nenhuma porta for especificada, tentara auto-detectar o Arduino")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
+\end{lstlisting}
+
+\section{Interface Grafica - destra\_ui.py}
+
+\subsection{Implementação da GUI}
+
+\begin{lstlisting}[language=Python, caption={Interface grafica DESTRA UI}, label=lst:destra_ui_py, basicstyle=\tiny\ttfamily, breaklines=true, numbers=left, numberstyle=\tiny, stepnumber=1, showstringspaces=false]
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Arquivo: destra_ui.py
+Autor: Sandro Fadiga
+Instituicao: EESC - USP (Escola de Engenharia de Sao Carlos)
+Projeto: DESTRA - DEpurador de Sistemas em Tempo ReAl
+Data de Criacao: 09/01/2025
+Versao: 1.0
+
+Descricao:
+    Interface grafica (GUI) para o sistema DESTRA de depuracao em tempo real.
+    Fornece uma interface amigavel para operacoes peek/poke em sistemas Arduino,
+    com analise de arquivos ELF para extracao de informacoes de variaveis.
+
+Funcionalidades:
+    - Interface grafica intuitiva com PySide6/Qt
+    - Selecao e conexao automatica com Arduino
+    - Carregamento e analise de arquivos ELF
+    - Busca e filtragem de variaveis
+    - Operacoes peek (leitura) e poke (escrita) de memoria
+    - Auto-peek com frequencia configuravel
+    - Visualizacao em tabelas interativas
+    - Suporte a drag-and-drop entre tabelas
+
+Interface:
+    - Secao de conexao: Deteccao e conexao com Arduino
+    - Secao de arquivo: Selecao de arquivo ELF
+    - Tabela de variaveis disponiveis: Lista todas as variaveis do ELF
+    - Tabela de variaveis selecionadas: Variaveis para monitoramento
+    - Controles de peek/poke: Leitura e escrita de valores
+
+Dependencias:
+    - PySide6: Framework Qt para interface grafica
+    - pyserial: Comunicacao serial
+    - data_dictionary: Parser de arquivos ELF
+    - destra: Protocolo de comunicacao DESTRA
+
+Licenca: MIT
+"""
+
+import sys
+import time
+from PySide6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QComboBox,
+    QSpinBox,
+    QLineEdit,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QLabel,
+    QFileDialog,
+    QSplitter,
+    QGroupBox,
+    QMessageBox,
+    QCheckBox,
+)
+from PySide6.QtCore import Qt, QTimer
+
+# Importar o dicionario de dados ELF
+from data_dictionary import ElfDataDictionary, VariableInfo
+from destra import DestraProtocol
+from logger_config import DestraLogger
+
+
+class DestraGUI(QMainWindow):
+
+    PERF_DUMP_FILE = "./tests/destra_ui_{freq}hz.log"
+    ARDUINO_DUMP_FILE = "./tests/arduino_{freq}hz.log"
+
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("DEpurador de Sistemas em Tempo ReAl - DESTRA")
+        self.setGeometry(100, 100, 1200, 800)
+        self.setStyleSheet("font: 600 14pt")
+
+        # Configurar logger
+        self.logger_manager = DestraLogger()
+        self.logger = self.logger_manager.logger.getChild("UI")
+
+        # Armazenar o dicionario de dados ELF
+        self.elf_data = None
+        # Armazenar as variaveis do elf
+        self.all_variables = []
+        self._variable_list: list[VariableInfo] = []
+        self._destra: DestraProtocol = DestraProtocol()
+        # port -> port.device ,  port.description
+        self._arduino_ports = []
+        self._other_ports = []
+        self._current_log = []
+
+        # Criar widget central e layout principal
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+
+        # Criar layout de ui
+        self._create_connection_section(main_layout)
+        self._create_file_section(main_layout)
+        self._create_tables_section(main_layout)
+
+        main_layout.setStretch(0, 0)
+        main_layout.setStretch(1, 0)
+        main_layout.setStretch(2, 3)
+        # main_layout.setStretch(3, 0)
+
+        # Configurar timer para atualizacao periodica de portas COM
+        self.auto_peek_timer = QTimer()
+        self.auto_peek_timer.timeout.connect(self.peek_values)
+
+        self.refresh_com_ports()
+        self._is_connected = False
+
+    def _text_2_num(self, val_txt: str) -> float | int | None:
+        """Converter texto para formato int ou float, caso nao consiga retorna None"""
+        val = None
+        try:
+            val = int(val_txt)
+            return val
+        except:
+            try:
+                val = float(val_txt)
+                return val
+            except:
+                return val
+
+    def _create_connection_section(self, parent_layout):
+        """Criar a secao de configuracoes de conexao"""
+        group = QGroupBox("Configuracoes de Conexao")
+        layout = QHBoxLayout()
+
+        # Scaneia as portas disponiveis
+        self.scan_button = QPushButton("Detectar")
+        self.scan_button.setMinimumWidth(150)
+        self.scan_button.clicked.connect(self.refresh_com_ports)
+        layout.addWidget(self.scan_button)
+
+        # Selecao de porta COM
+        layout.addWidget(QLabel("Portas:"))
+        self.com_port_combo = QComboBox()
+        self.com_port_combo.setMinimumWidth(150)
+        layout.addWidget(self.com_port_combo)
+
+        # connecta com a porta selectionada
+        self.connect_button = QPushButton("Connectar")
+        self.connect_button.setMinimumWidth(150)
+        self.connect_button.clicked.connect(self.connect_to_arduino)
+        layout.addWidget(self.connect_button)
+
+        # Taxa de amostragem
+        self.auto_peek_check = QCheckBox()
+        self.auto_peek_check.setText("Auto Peek")
+        layout.addWidget(self.auto_peek_check)
+        self.auto_peek_check.checkStateChanged.connect(self.start_stop_auto_peek)
+
+        layout.addWidget(QLabel("Freq. (Hz):"))
+        self.sample_rate_spin = QSpinBox()
+        self.sample_rate_spin.setRange(1, 1000)
+        self.sample_rate_spin.setValue(10)  # Padrao 10 Hz
+        self.sample_rate_spin.valueChanged.connect(self.change_auto_peek_freq)
+        self.sample_rate_spin.setSuffix(" Hz")
+        layout.addWidget(self.sample_rate_spin)
+
+        # Adicionar controle de nivel de logging
+        layout.addWidget(QLabel("Log Level:"))
+        self.log_level_combo = QComboBox()
+        self.log_level_combo.addItems(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
+        self.log_level_combo.setCurrentText("ERROR")
+        self.log_level_combo.currentTextChanged.connect(self.change_log_level)
+        layout.addWidget(self.log_level_combo)
+
+        self.dump_button = QPushButton("Baixar logs")
+        self.dump_button.setMinimumWidth(150)
+        self.dump_button.clicked.connect(self.dump_performance_logs)
+        layout.addWidget(self.dump_button)
+
+        layout.addStretch()
+        group.setLayout(layout)
+        parent_layout.addWidget(group)
+
+    def _create_file_section(self, parent_layout):
+        """Criar a secao de selecao de arquivo"""
+        group = QGroupBox("Selecao de Arquivo ELF")
+        layout = QHBoxLayout()
+
+        layout.addWidget(QLabel("Arquivo ELF:"))
+        self.file_path_edit = QLineEdit()
+        self.file_path_edit.setReadOnly(True)
+        self.file_path_edit.setPlaceholderText("Selecione um arquivo ELF...")
+        layout.addWidget(self.file_path_edit)
+
+        self.browse_button = QPushButton("Procurar...")
+        self.browse_button.clicked.connect(self.browse_file)
+        layout.addWidget(self.browse_button)
+
+        group.setLayout(layout)
+        parent_layout.addWidget(group)
+
+    def _create_tables_section(self, parent_layout):
+        """Criar a secao de duas tabelas com funcionalidade de busca"""
+        # Criar divisor para tabelas redimensionaveis
+        splitter = QSplitter(Qt.Horizontal)
+
+        # Secao de variaveis disponiveis
+        available_group = QGroupBox("Variaveis Disponiveis")
+        available_layout = QVBoxLayout()
+
+        # Adicionar caixa de busca para variaveis disponiveis
+        search_layout = QHBoxLayout()
+        search_layout.addWidget(QLabel("Buscar:"))
+        self.search_edit = QLineEdit()
+        self.search_edit.setPlaceholderText(
+            "Digite o padrao do nome da variavel (ex: timer*, *pin*, gyro_*)"
+        )
+        self.search_edit.textChanged.connect(self.filter_variables)
+        search_layout.addWidget(self.search_edit)
+
+        # Adicionar botao de limpar
+        self.clear_search_button = QPushButton("Limpar")
+        self.clear_search_button.clicked.connect(self.clear_search)
+        search_layout.addWidget(self.clear_search_button)
+
+        available_layout.addLayout(search_layout)
+
+        # Tabela de variaveis disponiveis
+        self.available_table = QTableWidget()
+        self.available_table.setColumnCount(4)
+        self.available_table.setHorizontalHeaderLabels(
+            ["Nome", "Endereco", "Tipo", "Tamanho"]
+        )
+        self.available_table.horizontalHeader().setStretchLastSection(True)
+        self.available_table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.available_table.setAlternatingRowColors(True)
+        self.available_table.setSortingEnabled(True)
+
+        # Habilitar arrastar da tabela disponivel
+        self.available_table.setDragEnabled(True)
+        self.available_table.setDefaultDropAction(Qt.CopyAction)
+
+        available_layout.addWidget(self.available_table)
+
+        # Adicionar rotulo de status
+        self.status_label = QLabel("Nenhum arquivo ELF carregado")
+        available_layout.addWidget(self.status_label)
+
+        available_group.setLayout(available_layout)
+
+        # Tabela de variaveis selecionadas
+        selected_group = QGroupBox("Variaveis Selecionadas")
+        selected_layout = QVBoxLayout()
+
+        self._create_buttons_section(selected_layout)
+
+        self.selected_table = QTableWidget()
+        self.selected_table.setColumnCount(3)
+        self.selected_table.setHorizontalHeaderLabels(
+            ["Nome", "Valor Peek", "Valor Poke"]
+        )
+        self.selected_table.horizontalHeader().setStretchLastSection(True)
+        self.selected_table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.selected_table.setAlternatingRowColors(True)
+
+        # Habilitar soltar na tabela selecionada
+        self.selected_table.setAcceptDrops(True)
+        self.selected_table.viewport().setAcceptDrops(True)
+        self.selected_table.setDropIndicatorShown(True)
+
+        selected_layout.addWidget(self.selected_table)
+        selected_group.setLayout(selected_layout)
+
+        # Adicionar ao divisor
+        splitter.addWidget(available_group)
+        splitter.addWidget(selected_group)
+        splitter.setSizes([600, 600])  # Tamanhos iniciais
+
+        parent_layout.addWidget(splitter)
+
+        # Conectar duplo clique para adicionar variavel
+        self.available_table.itemDoubleClicked.connect(self.add_variable_to_selected)
+        self.selected_table.itemDoubleClicked.connect(self.on_poke_cell_double_clicked)
+        self.selected_table.itemChanged.connect(self.on_poke_cell_edited)
+
+    def _create_buttons_section(self, parent_layout):
+        """Criar a secao de botoes de acao"""
+        layout = QHBoxLayout()
+        layout.addStretch()
+
+        self.peek_button = QPushButton("Peek")
+        self.peek_button.setMinimumWidth(150)
+        self.peek_button.clicked.connect(self.peek_values)
+        layout.addWidget(self.peek_button)
+
+        self.poke_button = QPushButton("Poke")
+        self.poke_button.setMinimumWidth(150)
+        self.poke_button.clicked.connect(self.poke_values)
+        layout.addWidget(self.poke_button)
+
+        layout.addStretch()
+        parent_layout.addLayout(layout)
+\end{lstlisting}
+
+\section{Analisador ELF - data\_dictionary.py}
+
+\subsection{Parser de Arquivos ELF e Extracao de Variaveis}
+
+\begin{lstlisting}[language=Python, caption={Módulo data\_dictionary.py - Analise de arquivos ELF}, label=lst:data_dictionary_py, basicstyle=\tiny\ttfamily, breaklines=true, numbers=left, numberstyle=\tiny, stepnumber=1, showstringspaces=false]
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Arquivo: data_dictionary.py
+Autor: Sandro Fadiga
+Instituicao: EESC - USP (Escola de Engenharia de Sao Carlos)
+Projeto: DESTRA - DEpurador de Sistemas em Tempo ReAl
+Data de Criacao: 09/01/2025
+Versao: 1.0
+
+Descricao:
+    Analisador de Dicionario de Dados ELF para Arduino Uno.
+    Este modulo fornece uma interface simplificada para extrair informacoes
+    de variaveis de arquivos ELF com informacoes de debug DWARF, especificamente
+    projetado para implementar funcionalidade peek/poke no Arduino Uno.
+
+Funcionalidades:
+    - Analise de arquivos ELF com informacoes DWARF
+    - Extracao de enderecos e tipos de variaveis
+    - Suporte para arrays, structs e tipos basicos
+    - Interface simplificada para operacoes peek/poke
+    - Busca e filtragem de variaveis por padroes
+
+Dependencias:
+    - pyelftools: Para analise de arquivos ELF e DWARF
+
+Licenca: MIT
+"""
+
+from __future__ import annotations
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple, Union
+
+from elftools.dwarf.die import DIE
+from elftools.elf.elffile import ELFFile
+
+from logger_config import DestraLogger
+
+# Configurar logger para este modulo
+logger_manager = DestraLogger()
+logger = logger_manager.logger.getChild("DataDictionary")
+
+
+@dataclass
+class VariableInfo:
+    """Informacoes sobre uma variavel extraida do arquivo ELF."""
+
+    name: str
+    address: int
+    size: int
+    base_type: str  # 'uint8', 'uint16', 'uint32', 'int8', 'int16', 'int32', 'float', 'double', 'struct', 'array'
+    is_signed: bool
+    is_pointer: bool
+    array_dimensions: Optional[List[int]] = None
+    struct_name: Optional[str] = None
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+
+class DecodedTypes:
+
+    @staticmethod
+    def decode_type(vartype: str) -> tuple[str, int] | None:
+        LookupTable = {
+            "bytes": ("<B", -1),
+            "uint8": ("<B", 1),
+            "int8": ("<b", 1),
+            "uint16": ("<H", 2),
+            "int16": ("<h", 2),
+            "uint32": ("<I", 4),
+            "int32": ("<i", 4),
+            "long unsigned int": ("<I", 4),
+            "long": ("<i", 4),
+            "long signed int": ("<i", 4),
+            "float": ("f", 4),
+            "double": ("d", 8),
+        }
+        return LookupTable.get(vartype, None)
+
+class ElfDataDictionary:
+    """
+    Um analisador ELF simplificado para extrair informacoes de variaveis.
+
+    Esta classe fornece metodos para listar e consultar variaveis de um arquivo ELF
+    com informacoes de debug DWARF, otimizado para operacoes peek/poke.
+    """
+
+    # Mapeamento de tipos C basicos para categorias simplificadas
+    TYPE_MAPPING = {
+        ("unsigned char", 1): ("uint8", False),
+        ("uint8_t", 1): ("uint8", False),
+        ("char", 1): ("int8", True),
+        ("signed char", 1): ("int8", True),
+        ("unsigned short", 2): ("uint16", False),
+        ("uint16_t", 2): ("uint16", False),
+        ("short", 2): ("int16", True),
+        ("int", 2): ("int16", True),  # int do Arduino Uno e 16-bit
+        ("unsigned int", 2): ("uint16", False),
+        ("unsigned long", 4): ("uint32", False),
+        ("uint32_t", 4): ("uint32", False),
+        ("long", 4): ("int32", True),
+        ("long int", 4): ("int32", True),
+        ("float", 4): ("float", True),
+        ("double", 4): ("float", True),  # double do Arduino Uno e igual a float
+    }
+
+    def __init__(self, elf_path: Union[str, Path]):
+        """
+        Inicializar o analisador de dicionario de dados ELF.
+
+        Args:
+            elf_path: Caminho para o arquivo ELF
+
+        Raises:
+            FileNotFoundError: Se o arquivo ELF nao existir
+            ValueError: Se o arquivo nao for um ELF valido ou nao tiver informacoes de debug
+        """
+        self.elf_path = Path(elf_path)
+        if not self.elf_path.exists():
+            raise FileNotFoundError(f"Arquivo ELF nao encontrado: {self.elf_path}")
+
+        self._variables: Dict[str, VariableInfo] = {}
+        self._parse_elf_file()
+
+    def _parse_elf_file(self) -> None:
+        """Analisar o arquivo ELF e extrair informacoes de variaveis."""
+        with open(self.elf_path, "rb") as f:
+            try:
+                elffile = ELFFile(f)
+            except Exception as e:
+                raise ValueError(f"Arquivo ELF invalido: {e}")
+
+            if not elffile.has_dwarf_info():
+                raise ValueError("Arquivo ELF nao possui informacoes de debug DWARF")
+
+            dwarf_info = elffile.get_dwarf_info()
+
+            # Analisar todas as unidades de compilação
+            for cu in dwarf_info.iter_CUs():
+                self._parse_compilation_unit(cu)
+
+    def _parse_compilation_unit(self, cu) -> None:
+        """Analisar uma única unidade de compilação para variaveis."""
+        # Construir um cache de offsets DIE para informacoes de tipo analisadas
+        type_cache = {}
+
+        # Primeira passada: analisar todas as definições de tipo
+        for die in cu.iter_DIEs():
+            if die.tag in [
+                "DW_TAG_base_type",
+                "DW_TAG_typedef",
+                "DW_TAG_structure_type",
+                "DW_TAG_array_type",
+                "DW_TAG_pointer_type",
+                "DW_TAG_const_type",
+                "DW_TAG_volatile_type",
+            ]:
+                type_info = self._parse_type(die, cu, type_cache)
+                if type_info:
+                    type_cache[die.offset] = type_info
+
+        # Segunda passada: analisar variaveis
+        for die in cu.iter_DIEs():
+            if (
+                die.tag == "DW_TAG_variable"
+                and "DW_AT_declaration" not in die.attributes
+            ):
+                self._parse_variable(die, cu, type_cache)
+
+    def _parse_type(self, die: DIE, cu, type_cache: dict) -> Optional[dict]:
+        """Analisar informacoes de tipo de um DIE."""
+        type_info = {}
+
+        if die.tag == "DW_TAG_base_type":
+            name = die.attributes.get("DW_AT_name")
+            size = die.attributes.get("DW_AT_byte_size")
+            if name and size:
+                name_str = name.value.decode("utf-8")
+                size_val = size.value
+                type_key = (name_str, size_val)
+
+                if type_key in self.TYPE_MAPPING:
+                    base_type, is_signed = self.TYPE_MAPPING[type_key]
+                    type_info = {
+                        "base_type": base_type,
+                        "size": size_val,
+                        "is_signed": is_signed,
+                        "is_pointer": False,
+                        "is_array": False,
+                        "is_struct": False,
+                    }
+                else:
+                    # Tipo base desconhecido, armazenar informação bruta
+                    type_info = {
+                        "base_type": name_str,
+                        "size": size_val,
+                        "is_signed": "unsigned" not in name_str.lower(),
+                        "is_pointer": False,
+                        "is_array": False,
+                        "is_struct": False,
+                    }
+
+        elif die.tag == "DW_TAG_typedef":
+            # Seguir o typedef até o tipo real
+            type_attr = die.attributes.get("DW_AT_type")
+            if type_attr:
+                ref_offset = self._get_reference_offset(type_attr, cu)
+                if ref_offset in type_cache:
+                    type_info = type_cache[ref_offset].copy()
+                else:
+                    # Tentar encontrar o DIE referenciado
+                    ref_die = self._get_die_at_offset(cu, ref_offset)
+                    if ref_die:
+                        type_info = self._parse_type(ref_die, cu, type_cache) or {}
+
+        elif die.tag == "DW_TAG_pointer_type":
+            type_info = {
+                "base_type": "uint16",  # Ponteiros são 16-bit no Arduino Uno
+                "size": 2,
+                "is_signed": False,
+                "is_pointer": True,
+                "is_array": False,
+                "is_struct": False,
+            }
+
+        elif die.tag == "DW_TAG_array_type":
+            type_attr = die.attributes.get("DW_AT_type")
+            if type_attr:
+                ref_offset = self._get_reference_offset(type_attr, cu)
+                element_type = type_cache.get(ref_offset, {})
+
+                # Obter dimensões do array
+                dimensions = []
+                for child in die.iter_children():
+                    if child.tag == "DW_TAG_subrange_type":
+                        upper_bound = child.attributes.get("DW_AT_upper_bound")
+                        if upper_bound:
+                            dimensions.append(upper_bound.value + 1)
+
+                if element_type and dimensions:
+                    total_size = element_type.get("size", 1)
+                    for dim in dimensions:
+                        total_size *= dim
+
+                    type_info = element_type.copy()
+                    type_info["is_array"] = True
+                    type_info["array_dimensions"] = dimensions
+                    type_info["size"] = total_size
+
+        elif die.tag == "DW_TAG_structure_type":
+            name = die.attributes.get("DW_AT_name")
+            size = die.attributes.get("DW_AT_byte_size")
+
+            if size:  # Processar apenas definições completas de struct
+                struct_name = name.value.decode("utf-8") if name else "anonymous_struct"
+                type_info = {
+                    "base_type": "struct",
+                    "size": size.value,
+                    "is_signed": False,
+                    "is_pointer": False,
+                    "is_array": False,
+                    "is_struct": True,
+                    "struct_name": struct_name,
+                }
+
+                # Analisar membros da struct
+                members = []
+                for member_die in die.iter_children():
+                    if member_die.tag == "DW_TAG_member":
+                        member_info = self._parse_struct_member(
+                            member_die, cu, type_cache
+                        )
+                        if member_info:
+                            members.append(member_info)
+
+                type_info["members"] = members
+
+        elif die.tag in ["DW_TAG_const_type", "DW_TAG_volatile_type"]:
+            # Estes são qualificadores de tipo, seguir até o tipo real
+            type_attr = die.attributes.get("DW_AT_type")
+            if type_attr:
+                ref_offset = self._get_reference_offset(type_attr, cu)
+                if ref_offset in type_cache:
+                    type_info = type_cache[ref_offset].copy()
+                else:
+                    ref_die = self._get_die_at_offset(cu, ref_offset)
+                    if ref_die:
+                        type_info = self._parse_type(ref_die, cu, type_cache) or {}
+
+        return type_info
+
+    def _parse_struct_member(self, die: DIE, cu, type_cache: dict) -> Optional[dict]:
+        """Analisar um membro de struct."""
+        name = die.attributes.get("DW_AT_name")
+        type_attr = die.attributes.get("DW_AT_type")
+        location = die.attributes.get("DW_AT_data_member_location")
+
+        if name and type_attr:
+            member_name = name.value.decode("utf-8")
+            ref_offset = self._get_reference_offset(type_attr, cu)
+            member_type = type_cache.get(ref_offset, {})
+
+            offset = 0
+            if location:
+                # Extrair offset da localização
+                if isinstance(location.value, list) and len(location.value) > 1:
+                    # Formato DW_OP_plus_uconst
+                    offset = location.value[1]
+                elif isinstance(location.value, int):
+                    offset = location.value
+
+            return {"name": member_name, "offset": offset, "type_info": member_type}
+
+        return None
+
+    def _parse_variable(self, die: DIE, cu, type_cache: dict) -> None:
+        """Analisar um DIE de variavel e adiciona-lo ao dicionario."""
+        name_attr = die.attributes.get("DW_AT_name")
+        type_attr = die.attributes.get("DW_AT_type")
+        location_attr = die.attributes.get("DW_AT_location")
+
+        # Deve ter pelo menos nome e tipo
+        if not (name_attr and type_attr):
+            return
+
+        var_name = name_attr.value.decode("utf-8")
+
+        # Obter endereço da localização se disponível
+        address = 0
+        if location_attr:
+            address = self._extract_address(location_attr.value)
+            if address is None:
+                # Se não conseguirmos extrair o endereço, tentar usar um padrão ou pular
+                # Algumas variaveis podem estar otimizadas ou em registradores
+                logger.warning(
+                    f"Não foi possível extrair endereço para variavel '{var_name}'"
+                )
+                # Por enquanto, ainda vamos adiciona-la com endereço 0
+                address = 0
+        else:
+            # Variavel sem localização - pode ser externa, const ou otimizada
+            # Verificar se é externa
+            if "DW_AT_external" in die.attributes:
+                logger.debug(f"Variavel '{var_name}' é externa (global)")
+                # Variaveis externas devem ter endereços, mas podem precisar de linking
+                address = 0  # Sera resolvido no tempo de link
+            else:
+                logger.debug(
+                    f"Variavel '{var_name}' não tem localização (pode estar otimizada)"
+                )
+                # Ainda adicionar com endereço 0 para completude
+                address = 0
+
+        # Obter informacoes de tipo
+        ref_offset = self._get_reference_offset(type_attr, cu)
+        type_info = type_cache.get(ref_offset, {})
+
+        if not type_info:
+            return
+
+        # Criar informacoes base da variavel
+        var_info = VariableInfo(
+            name=var_name,
+            address=address,
+            size=type_info.get("size", 0),
+            base_type=type_info.get("base_type", "unknown"),
+            is_signed=type_info.get("is_signed", False),
+            is_pointer=type_info.get("is_pointer", False),
+            array_dimensions=type_info.get("array_dimensions"),
+            struct_name=type_info.get("struct_name"),
+        )
+
+        self._variables[var_name] = var_info
+
+        # Se for um array, adicionar entradas de elementos individuais
+        if type_info.get("is_array") and type_info.get("array_dimensions"):
+            self._add_array_elements(var_name, var_info, type_info)
+
+        # Se for uma struct, adicionar entradas de membros
+        if type_info.get("is_struct") and "members" in type_info:
+            self._add_struct_members(var_name, var_info, type_info)
+
+    def _add_array_elements(
+        self, base_name: str, base_info: VariableInfo, type_info: dict
+    ) -> None:
+        """Adicionar entradas de elementos individuais do array."""
+        dimensions = type_info["array_dimensions"]
+        element_size = type_info["size"] // (dimensions[0] if dimensions else 1)
+
+        # Por enquanto, apenas lidar com arrays 1D
+        if len(dimensions) == 1:
+            for i in range(dimensions[0]):
+                element_name = f"{base_name}[{i}]"
+                element_info = VariableInfo(
+                    name=element_name,
+                    address=base_info.address + (i * element_size),
+                    size=element_size,
+                    base_type=base_info.base_type,
+                    is_signed=base_info.is_signed,
+                    is_pointer=False,
+                    array_dimensions=None,
+                    struct_name=None,
+                )
+                self._variables[element_name] = element_info
+
+    def _add_struct_members(
+        self, base_name: str, base_info: VariableInfo, type_info: dict
+    ) -> None:
+        """Adicionar entradas de membros da struct."""
+        for member in type_info.get("members", []):
+            member_name = f"{base_name}.{member['name']}"
+            member_type_info = member.get("type_info", {})
+
+            member_info = VariableInfo(
+                name=member_name,
+                address=base_info.address + member["offset"],
+                size=member_type_info.get("size", 0),
+                base_type=member_type_info.get("base_type", "unknown"),
+                is_signed=member_type_info.get("is_signed", False),
+                is_pointer=member_type_info.get("is_pointer", False),
+                array_dimensions=member_type_info.get("array_dimensions"),
+                struct_name=member_type_info.get("struct_name"),
+            )
+            self._variables[member_name] = member_info
+
+    def _get_reference_offset(self, attr, cu) -> int:
+        """Obter o offset absoluto para um atributo de referência."""
+        offset = attr.value
+        if attr.form == "DW_FORM_ref4":
+            # Offset relativo à CU
+            offset += cu.cu_offset
+        return offset
+
+    def _get_die_at_offset(self, cu, offset: int) -> Optional[DIE]:
+        """Obter um DIE em um offset específico dentro de uma CU."""
+        try:
+            return cu._get_cached_DIE(offset)
+        except:
+            return None
+
+    def _extract_address(self, location_value) -> Optional[int]:
+        """Extrair endereço de expressão de localização DWARF."""
+        if isinstance(location_value, list):
+            if len(location_value) == 0:
+                return None
+
+            # Verificar DW_OP_addr (0x03) - endereço direto
+            if location_value[0] == 0x03 and len(location_value) >= 3:
+                # Endereço segue o opcode (16-bit para AVR)
+                return int.from_bytes(bytes(location_value[1:3]), "little")
+
+            # Verificar outras expressões de localização comuns
+            # DW_OP_fbreg - relativo à base do frame (variaveis locais)
+            if location_value[0] == 0x91:
+                # Esta é uma variavel relativa à pilha, não podemos obter endereço absoluto
+                return None
+
+            # Tentar extrair dos últimos 2 bytes (comportamento legado)
+            if len(location_value) >= 2:
+                # Alguns compiladores colocam o endereço diretamente sem opcode
+                return int.from_bytes(bytes(location_value[-2:]), "little")
+
+        elif isinstance(location_value, int):
+            # Valor de endereço direto
+            return location_value
+
+        return None
+
+    # Métodos da API pública
+
+    def list_variables(self, pattern: Optional[str] = None) -> List[str]:
+        """
+        Listar todos os nomes de variaveis, opcionalmente filtrados por padrão.
+
+        Args:
+            pattern: Padrão glob opcional para filtrar nomes de variaveis (ex: "dig*pin*pgm")
+
+        Returns:
+            Lista de nomes de variaveis correspondentes ao padrão
+        """
+        names = list(self._variables.keys())
+
+        if pattern:
+            # Converter padrão glob para correspondência case-insensitive
+            import fnmatch
+
+            pattern_lower = pattern.lower()
+            names = [
+                name for name in names if fnmatch.fnmatch(name.lower(), pattern_lower)
+            ]
+
+        return sorted(names)
+
+    def get_variable_info(self, name: str) -> Optional[Tuple[int, int, str]]:
+        """
+        Obter informacoes de variavel por nome.
+
+        Args:
+            name: Nome da variavel (pode incluir índices de array ou membros de struct)
+
+        Returns:
+            Tupla de (endereço, tamanho, tipo) ou None se não encontrado
+        """
+        var_info = self._variables.get(name)
+        if var_info:
+            return (var_info.address, var_info.size, var_info.base_type)
+        return None
+
+    def get_detailed_variable_info(self, name: str) -> Optional[VariableInfo]:
+        """
+        Obter informacoes detalhadas de variavel por nome.
+
+        Args:
+            name: Nome da variavel
+
+        Returns:
+            Objeto VariableInfo ou None se não encontrado
+        """
+        return self._variables.get(name)
+
+    def search_variables(
+        self,
+        pattern: str,
+        min_size: Optional[int] = None,
+        max_size: Optional[int] = None,
+        var_type: Optional[str] = None,
+    ) -> List[VariableInfo]:
+        """
+        Buscar variaveis com múltiplos filtros.
+
+        Args:
+            pattern: Padrão glob para correspondência de nome
+            min_size: Tamanho mínimo da variavel em bytes
+            max_size: Tamanho maximo da variavel em bytes
+            var_type: Filtrar por tipo (ex: 'uint8', 'float', 'struct')
+
+        Returns:
+            Lista de objetos VariableInfo correspondentes a todos os critérios
+        """
+        results = []
+
+        # Primeiro filtrar por padrão de nome
+        matching_names = self.list_variables(pattern)
+
+        for name in matching_names:
+            var_info = self._variables[name]
+
+            # Aplicar filtros de tamanho
+            if min_size is not None and var_info.size < min_size:
+                continue
+            if max_size is not None and var_info.size > max_size:
+                continue
+
+            # Aplicar filtro de tipo
+            if var_type is not None and var_info.base_type != var_type:
+                continue
+
+            results.append(var_info)
+
+        return results
+
+    def get_all_variables(self) -> Dict[str, VariableInfo]:
+        """Obter todas as variaveis como um dicionario."""
+        return self._variables.copy()
+
+
+def main():
+    """Exemplo de uso do dicionario de dados ELF."""
+    import sys
+    from pathlib import Path
+
+    # Configurar logger para o main
+    test_logger = logger_manager.logger.getChild("Test")
+
+    if len(sys.argv) < 2:
+        test_logger.error("Uso: python data_dictionary.py <arquivo_elf>")
+        sys.exit(1)
+
+    elf_path = Path(sys.argv[1])
+
+    try:
+        # Criar o dicionario de dados
+        data_dict = ElfDataDictionary(elf_path)
+
+        # Exemplo 1: Listar todas as variaveis
+        test_logger.info(
+            f"Total de variaveis encontradas: {len(data_dict.get_all_variables())}"
+        )
+
+        # Exemplo 2: Buscar variaveis relacionadas a pinos digitais
+        test_logger.info("Variaveis de pinos digitais:")
+        for name in data_dict.list_variables("*digital*pin*"):
+            info = data_dict.get_variable_info(name)
+            if info:
+                addr, size, var_type = info
+                test_logger.info(
+                    f"  {name}: addr=0x{addr:04X}, size={size}, type={var_type}"
+                )
+
+        # Exemplo 3: Buscar variaveis de timer
+        test_logger.info("Variaveis de timer:")
+        for var in data_dict.search_variables("timer*"):
+            test_logger.info(
+                f"  {var.name}: addr=0x{var.address:04X}, size={var.size}, type={var.base_type}"
+            )
+
+        # Exemplo 4: Encontrar todas as variaveis float
+        test_logger.info("Variaveis float:")
+        for var in data_dict.search_variables("*", var_type="float"):
+            test_logger.info(f"  {var.name}: addr=0x{var.address:04X}")
+
+    except FileNotFoundError as e:
+        test_logger.error(f"Erro: {e}")
+    except ValueError as e:
+        test_logger.error(f"Erro: {e}")
+
+
+if __name__ == "__main__":
+    main()
+
+\end{lstlisting}

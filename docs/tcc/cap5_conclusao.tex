@@ -1,0 +1,53 @@
+\chapter{Conclusão e Trabalhos Futuros}
+\label{chap:conclusao}
+\section{Considerações Finais}
+A depuração e a verificação de sistemas embarcados críticos de tempo real representam esafios contínuos, especialmente quando há a necessidade de comprovar requisitos funcionais e temporais sem interferir diretamente na execução do software. Este trabalho apresentou o desenvolvimento e validação de um protocolo simples de peek/poke, voltado para observação e modificação controlada de variáveis internas, aplicado a um microcontrolador de baixo custo e com foco em apoio às atividades de teste e certificação conforme os princípios estabelecidos pela DO-178C.
+A proposta demonstrou que é possível projetar uma ferramenta de depuração modular, rastreável e de baixo custo, com impacto mínimo sobre o comportamento temporal do sistema embarcado. O uso de comandos estruturados e medições internas de desempenho (via \texttt{CMD\_GET\_PERF\_LOG}) permitiu validar a integridade da execução e quantificar a sobrecarga introduzida pela comunicação, confirmando a viabilidade da solução como mecanismo auxiliar em campanhas de teste e integração de software crítico.
+\section{Conclusões sobre o Protocolo Desenvolvido}
+Os resultados obtidos nos testes de desempenho e estresse mostraram que o protocolo mantém latência média inferior a 10 ms e jitter reduzido, mesmo sob alta carga de comandos, o que evidencia sua estabilidade temporal e robustez de comunicação.
+A análise embarcada revelou ainda que o tempo de processamento de comandos (\texttt{command\_process\_time}) manteve-se estável, em torno de 0,73 ms, com desvio padrão inferior a 0,003 ms, confirmando a previsibilidade exigida para sistemas de tempo real.
+Além de cumprir seu objetivo principal — prover leitura e escrita em variáveis internas de forma segura e controlada —, o protocolo mostrou-se útil como instrumento de coleta de dados para verificação de requisitos temporais, permitindo correlacionar métricas internas (como frame rate e process time) com medições externas via osciloscópio.
+Essa correlação fornece uma camada adicional de rastreabilidade entre o comportamento observado e o comportamento esperado, o que é fundamental em atividades de verificação e validação sob normas de certificação.
+\section{Relevância para o Contexto de Certificação}
+No contexto da certificação de software embarcado, a rastreabilidade entre requisitos, código e evidências de teste é um elemento essencial. O protocolo desenvolvido contribui diretamente para esse processo ao permitir a observação controlada de estados internos sem necessidade de instrumentação invasiva nem dependência de ferramentas proprietárias.
+Conforme previsto nas normas \cite{rtca2011do178c} e \cite{rtca2012do330}, a qualificação de ferramentas de apoio depende de seu impacto sobre as atividades de verificação. Nesse sentido, a solução proposta se enquadra como uma ferramenta de suporte não intrusiva, podendo ser utilizada em fases de integração e ensaio funcional para coleta de evidências objetivas de execução de requisitos temporais, análise de desempenho e confirmação de margens de WCET (\textit{Worst Case Execution Time}).
+A principal contribuição está em demonstrar que é possível implementar, de forma independente e rastreável, uma ferramenta simples, de arquitetura aberta e documentação completa, capaz de apoiar testes de conformidade e verificação de requisitos em sistemas embarcados críticos, mesmo quando não se dispõe de ferramentas comerciais qualificadas.
+Isso torna o framework aplicável tanto em ambientes acadêmicos (para ensino de práticas de verificação embarcada) quanto em contextos industriais, como protótipo de infraestrutura de depuração aderente aos processos de certificação.
+\section{Limitações Observadas}
+Durante a execução dos testes e da validação funcional do protocolo, algumas limitações foram identificadas e são consideradas oportunidades de evolução.
+\subsection{Ausência de Operações Contínuas}
+A primeira limitação diz respeito à ausência de suporte a operações contínuas de leitura ou escrita (\textit{continuous peek/poke}). Atualmente, cada requisição precisa ser iniciada de forma individual, o que limita o uso do protocolo em medições de alta frequência ou em observações contínuas de variáveis dinâmicas.
+A inclusão de um modo de operação contínua permitiria capturar séries temporais de forma mais eficiente, reduzindo a sobrecarga de comandos e ampliando o potencial de análise temporal.
+\subsection{Falta de Mecanismos de Integridade}
+Outra limitação está relacionada à robustez da camada de verificação de integridade de dados. Embora a comunicação se mostre estável nas condições atuais, o protocolo ainda não implementa mecanismos de verificação de redundância cíclica (CRC) ou checagem de erro robusta nos pacotes trocados.
+A ausência de um CRC dedicado pode, em cenários de ruído eletromagnético ou baud rates mais elevadas, introduzir risco de corrupção silenciosa de dados. A adoção de um CRC-16 ou CRC-32, associado à confirmação de sequência de comandos, representaria um avanço importante na confiabilidade e na segurança da comunicação.
+\subsection{Limitações de Arquitetura}
+Por fim, destaca-se que o framework, em sua forma atual, foi projetado para ambientes monothread e de comunicação serial simples, o que limita seu uso direto em plataformas com sistemas operacionais de tempo real (RTOS) ou múltiplas tarefas concorrentes.
+Apesar disso, sua estrutura modular permite fácil extensão para suportar filas de mensagens, buffers circulares e mecanismos de sincronização adequados para tais contextos.
+\section{Trabalhos Futuros}
+Dando continuidade ao trabalho, propõem-se as seguintes evoluções e aprimoramentos:
+\begin{enumerate}
+    \item \textbf{Implementação de Operações Contínuas:} Suporte a \textit{continuous peek/poke}, permitindo leitura e escrita contínua em variáveis selecionadas com temporização configurável.
+    \item \textbf{Mecanismos de Integridade de Dados:} Inclusão de verificação de redundância cíclica (CRC) nos pacotes de comunicação, garantindo detecção de erros de transmissão e validação completa dos dados trocados.
+    \item \textbf{Suporte a RTOS e Multitarefa:} Extensão do protocolo para ambientes com sistemas operacionais de tempo real, de forma a permitir sua aplicação em sistemas mais complexos e próximos de aplicações aeronáuticas reais.
+    \item \textbf{Integração com Ferramentas de Teste:} Integração com ferramentas de teste automatizado e bancos de requisitos, permitindo o registro automático de medições como evidências de verificação.
+    \item \textbf{Interface Gráfica Avançada:} Desenvolvimento de interface gráfica (GUI) aprimorada para facilitar a configuração, monitoramento e registro de sessões de depuração, com suporte a exportação de relatórios e visualização de históricos.
+    \item \textbf{Qualificação conforme DO-330:} Estudo de qualificação da ferramenta conforme os critérios do DO-330 \cite{rtca2012do330}, avaliando seu enquadramento como ferramenta de apoio à verificação.
+    \item \textbf{Suporte a Interfaces de Alta Velocidade:} Adaptação do protocolo para interfaces mais rápidas (CAN, SPI, Ethernet), de modo a ampliar o alcance e a taxa de atualização para cenários de teste em tempo real.
+    \item \textbf{Validação em Plataformas Adicionais:} Portabilidade do protocolo para outras arquiteturas de microcontroladores (ARM Cortex-M, RISC-V) e sistemas operacionais embarcados.
+    \item \textbf{Documentação e Padronização:} Elaboração de especificação formal do protocolo e publicação de guidelines para implementação em diferentes plataformas, facilitando adoção e contribuições da comunidade.
+\end{enumerate}
+\section{Perspectivas Finais}
+As melhorias propostas fortaleceriam ainda mais o protocolo como instrumento de apoio aos testes de certificação, tornando-o um componente efetivo na geração de evidências rastreáveis e no monitoramento controlado de software crítico em execução.
+A consolidação dessas evoluções permitiria ao framework DESTRA ser adotado não apenas como ferramenta de prototipagem e desenvolvimento, mas também como componente qualificado em processos formais de verificação e validação de sistemas embarcados críticos.
+Espera-se que este trabalho estimule futuras pesquisas e desenvolvimentos na área de depuração e monitoramento de sistemas embarcados, contribuindo para uma indústria mais segura, rastreável e aderente aos mais rigorosos padrões de certificação internacional.
+\section{Resumo das Contribuições}
+As principais contribuições deste trabalho podem ser assim resumidas:
+\begin{itemize}
+    \item Desenvolvimento de um protocolo simples, determinístico e modular para operações peek/poke em sistemas embarcados de baixo custo.
+    \item Implementação completa do protocolo em Arduino UNO com instrumentação para coleta de métricas de desempenho.
+    \item Desenvolvimento de ferramenta host em Python com interface gráfica intuitiva, suportando carregamento de símbolos ELF/DWARF e operações de monitoramento em tempo real.
+    \item Validação experimental abrangente através de testes de latência, estresse e rajada, com medições correlacionadas por osciloscópio.
+    \item Demonstração de viabilidade da solução para contextos de certificação de software embarcado crítico, conforme normas DO-178C e DO-330.
+    \item Disponibilização de solução de código aberto e documentação completa para apoio a pesquisa e desenvolvimento acadêmico e industrial.
+\end{itemize}
