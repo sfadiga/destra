@@ -1,0 +1,441 @@
+\chapter{Desenvolvimento do Protocolo}
+
+Este capítulo descreve o processo de concepção, definição e implementação do protocolo de comunicação \textit{peek/poke}, desenvolvido como solução simplificada para depuração e interação com sistemas embarcados. O objetivo é oferecer uma abordagem padronizada e de baixo custo, permitindo leitura e escrita em variáveis de memória do sistema embarcado de forma controlada e portátil.
+
+\section{Arquitetura do Sistema}
+
+A arquitetura proposta é composta por dois elementos principais:
+
+\begin{itemize}
+    \item \textbf{Software embarcado:} responsável por interpretar comandos recebidos via interface serial e executar operações de leitura (\textit{peek}) ou escrita (\textit{poke}) em endereços de memória previamente mapeados.
+    \item \textbf{Ferramenta host (cliente Python/DESTRA UI):} responsável por enviar comandos, exibir resultados ao usuário e automatizar sequências de acesso.
+\end{itemize}
+
+A comunicação é estabelecida por meio de uma porta serial (UART), amplamente disponível em plataformas de prototipagem, o que garante a portabilidade da solução. O diagrama simplificado da arquitetura pode ser representado como:
+
+\begin{center}
+    \small
+    \texttt{[Usuário]} $\leftrightarrow$ \texttt{[Cliente Python]} \\
+    $\stackrel{\text{UART}}{\leftrightarrow}$ \\
+    \texttt{[Handler Peek-Poke]} $\leftrightarrow$ \texttt{[Memória MCU]}
+\end{center}
+
+Para que os comandos sejam transmitidos entre um host, aplicativo manipulado por um usuário, e o sistema embarcado, foi especificado um protocolo que estabelece comandos de \textit{peek} e \textit{poke}. Estes comandos são codificados de acordo com as regras estabelecidas pelo protocolo e transmitidos via interface serial para o sistema embarcado, que por sua vez faz uso de uma máquina de estados para decodificar o protocolo e processar os comandos.
+
+\section{Especificação do Protocolo}
+
+O protocolo foi projetado para ser mínimo e determinístico, a fim de reduzir o overhead de comunicação e facilitar implementações em ambientes de recursos restritos. Cada pacote é composto por:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|c|l|}
+    \hline
+    \textbf{Campo} & \textbf{Tamanho (bytes)} & \textbf{Descrição} \\
+    \hline
+    Palavra Mágica & 2 & Conjunto de bytes usados para identificar um comando \\
+    \hline
+    Comando & 1 & Identificação do tipo de operação \\
+    \hline
+    Endereço & 2--4 & Posição de memória da variável \\
+    \hline
+    Tamanho & 1 & Tamanho (em bytes) do tipo da variável \\
+    \hline
+    Valor & N & Dados (no caso de comando poke) \\
+    \hline
+    \end{tabular}
+    \caption{Estrutura do pacote do protocolo peek/poke}
+    \label{tab:protocolo_pacote}
+\end{table}
+
+As duas operações básicas são:
+
+\begin{itemize}
+    \item \textbf{PEEK:} leitura de N bytes a partir de um endereço definido.
+    \item \textbf{POKE:} escrita de N bytes em um endereço definido.
+\end{itemize}
+
+Esse formato reduz a ambiguidade e facilita a interpretação tanto no sistema embarcado quanto na ferramenta cliente. O protocolo funciona em um sistema de Requisição e Resposta (Request/Response), onde a ferramenta host realiza requisições para o sistema embarcado, e este responde às requisições de acordo com o comando contido na requisição. As respostas são um echo do cabeçalho inicial da requisição (Palavra Mágica, Comando) adicionado um byte de Status (sucesso ou falha). No caso do comando peek, o valor da variável em memória é retornado. No caso do comando poke, um echo do valor recebido é retornado para certificar que os dados recebidos pelo sistema embarcado estão de acordo. Desta forma, a ferramenta host consegue identificar que seu comando foi aceito e processado pelo sistema embarcado.
+
+\subsection{Definições de Campos}
+
+O protocolo utiliza algumas definições padrão para poder identificar os bytes e a estrutura dos comandos recebidos:
+
+\begin{description}
+    \item[Palavra Mágica:] Os 2 bytes são definidos como uma constante com dois tokens em hexadecimal que em conjunto recriam a palavra ``Café'': \texttt{0xCA}, \texttt{0xFE}. O sistema embarcado espera esta sequência e ao recebê-la avança a máquina de estados para a espera do Comando.
+    
+    \item[Comando:] Definido em apenas um byte: \texttt{0xF1} para o comando de peek e \texttt{0xF2} para o comando de poke.
+    
+    \item[Endereço:] Dividido em dois bytes para a transmissão de valores multi-byte, mantendo compatibilidade nativa com a arquitetura AVR do Arduino UNO (little-endian). Esta escolha elimina overhead de conversão no sistema embarcado, otimizando o desempenho.
+    
+    \item[Tamanho:] 1 byte para descrever o tamanho do tipo da variável contida no endereço especificado pelo comando (1, 2, 4 ou 8 bytes).
+    
+    \item[Valor:] Este campo só é necessário no comando de poke, pois é nele que é transmitido o valor a ser sobrescrito no endereço especificado no comando.
+\end{description}
+
+\subsection{Exemplos de Pacotes}
+
+\textbf{Exemplo de pacote para comando PEEK:}
+
+Considerando uma variável com endereço \texttt{0x0104}, tipo \texttt{int16} e tamanho 2 bytes:
+
+\begin{center}
+    \texttt{CA FE F1 04 01 02}
+\end{center}
+
+Decomposição:
+
+\begin{itemize}
+    \item \texttt{CA FE}: Palavras mágicas
+    \item \texttt{F1}: Comando PEEK
+    \item \texttt{04}: Byte baixo do endereço (LSB)
+    \item \texttt{01}: Byte alto do endereço (MSB)
+    \item \texttt{02}: Tamanho (2 bytes)
+\end{itemize}
+
+Nota: o endereço \texttt{0x0104} é transmitido como \texttt{04 01} (little-endian).
+
+\textbf{Exemplo de pacote para comando POKE:}
+
+Considerando a mesma variável com endereço \texttt{0x0104}, tipo \texttt{int16}, tamanho 2 bytes e escrevendo o valor 4 (\texttt{0x0004}):
+
+\begin{center}
+    \texttt{CA FE F2 04 01 02 04 00}
+\end{center}
+
+Decomposição:
+
+\begin{itemize}
+    \item \texttt{CA FE}: Palavras mágicas
+    \item \texttt{F2}: Comando POKE
+    \item \texttt{04}: Byte baixo do endereço (LSB)
+    \item \texttt{01}: Byte alto do endereço (MSB)
+    \item \texttt{02}: Tamanho (2 bytes)
+    \item \texttt{04 00}: Valor \texttt{0x0004} em little-endian
+\end{itemize}
+
+Com estas definições, temos um protocolo simples, porém eficaz, para o processamento de requisições e envio de respostas.
+
+\section{Implementação no Microcontrolador}
+
+No software embarcado, o protocolo foi implementado com uma função que é executada no laço principal do microcontrolador (Arduino Uno, na versão de referência). O fluxo básico segue as seguintes etapas:
+
+\begin{enumerate}
+    \item Aguardar bytes recebidos pela interface Serial/UART.
+    \item Interpretar a sequência de bytes recebidas de forma a detectar o início do cabeçalho e determinar se trata-se de uma operação \textit{peek} ou \textit{poke}.
+    \item Executar a leitura no caso de \textit{peek} no endereço de memória recebido, ou escrita, no caso de \textit{poke}, do valor recebido no endereço especificado.
+    \item Retornar uma resposta estruturada ao cliente, confirmando o resultado da operação.
+\end{enumerate}
+
+A implementação foi concebida de forma modular, permitindo que novos comandos sejam adicionados sem impacto significativo no desempenho. Uma máquina de estados realiza a interpretação dos dados recebidos pela porta serial. O mecanismo de leitura e escrita da serial não faz parte do escopo deste trabalho, sendo utilizado o mecanismo já disponibilizado pelo sistema embarcado (Arduino UNO).
+
+A máquina de estados criada é capaz de processar tanto os comandos de \textit{peek} quanto os de \textit{poke}. O processamento é feito por meio da tokenização dos bytes recebidos pela porta serial. Cada transição é um ponto de verificação para o próximo byte a ser recebido. A máquina de estados fica em um modo de espera, comparando os bytes recebidos com o que está definido para a transição ao próximo estado. Em caso positivo (o byte esperado corresponde ao byte codificado para a transição), a máquina avança ao próximo estado e assim sucessivamente. Ao final do processamento de um cabeçalho completo, faz-se a chamada para o processamento do comando, e a máquina de estados volta à condição inicial de espera.
+
+Por meio da Figura \ref{fig:destra_diagrama_estados}, é possível observar o comportamento 
+determinístico da máquina de estados, onde cada estado aguarda um byte específico para 
+avançar à etapa subsequente.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{recursos/figuras/destra_diagrama_estados.png}
+    \caption{Diagrama de estados do sistema de comunicação peek/poke}
+    \label{fig:destra_diagrama_estados}
+\end{figure}
+
+\subsection{Pseudocódigo da Máquina de Estados}
+
+O mecanismo é implementado dentro de uma rotina chamada \texttt{destraHandler} em um arquivo a ser incluído no projeto Arduino (\texttt{destra\_protocol.ino}). Esta função é um loop que tem como regra de parada a entrada de dados da Serial e o estado atual da máquina de estados sendo diferente de \texttt{PROCESS\_REQUEST}.
+
+\begin{lstlisting}[language=C, caption={Pseudocódigo da máquina de estados do protocolo}, label=lst:fsm_pseudocode, extendedchars=false, basicstyle=\ttfamily]
+Funcao destraHandler():
+    Enquanto houver bytes disponiveis na Serial
+        e destraState != PROCESS_REQUEST:
+        Ler proximo byte -> inByte
+        Se destraState == WAIT_START_HIGH:
+            Se inByte == 0xCA:
+                destraState = WAIT_START_LOW
+            Senao:
+                destraState = WAIT_START_HIGH
+        Senao se destraState == WAIT_START_LOW:
+            Se inByte == 0xFE:
+                destraState = WAIT_COMMAND
+            Senao:
+                destraState = WAIT_START_HIGH
+        Senao se destraState == WAIT_COMMAND:
+            destraCommand = inByte
+            Se destraCommand == CMD_PEEK ou
+               destraCommand == CMD_POKE:
+                destraState = WAIT_ADDRESS_LOW
+            Senao:
+                destraState = WAIT_START_HIGH
+        Senao se destraState == WAIT_ADDRESS_LOW:
+            addressLow = inByte
+            destraState = WAIT_ADDRESS_HIGH
+        Senao se destraState == WAIT_ADDRESS_HIGH:
+            addressHigh = inByte
+            Combinar addressLow e addressHigh ->
+                destraAddress (little-endian)
+            destraState = WAIT_SIZE
+        Senao se destraState == WAIT_SIZE:
+            destraSize = inByte
+            Se destraCommand == CMD_PEEK:
+                destraState = PROCESS_REQUEST
+            Senao se destraCommand == CMD_POKE:
+                destraValueIndex = 0
+                destraState = WAIT_VALUE
+            Senao:
+                destraState = WAIT_START_HIGH
+        Senao se destraState == WAIT_VALUE:
+            Se destraValueIndex < 8 e
+               destraValueIndex < destraSize:
+                destraValueBuffer[destraValueIndex]
+                    = inByte
+                destraValueIndex++
+                Se destraValueIndex >= destraSize:
+                    destraState = PROCESS_REQUEST
+\end{lstlisting}
+
+\subsection{Variáveis da Máquina de Estados}
+
+A Tabela \ref{tab:fsm_vars} apresenta as variáveis utilizadas na implementação da máquina de estados:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|l|}
+    \hline
+    \textbf{Variável} & \textbf{Descrição} \\
+    \hline
+    \texttt{destraState} & Estado atual. Inicializada com \texttt{WAIT\_START\_HIGH} \\
+    \hline
+    \texttt{destraCommand} & Comando recebido (\texttt{CMD\_PEEK} ou \texttt{CMD\_POKE}) \\
+    \hline
+    \texttt{addressLow} & Byte menos significativo (LSB) do endereço \\
+    \hline
+    \texttt{addressHigh} & Byte mais significativo (MSB) do endereço \\
+    \hline
+    \texttt{destraAddress} & Endereço de 16 bits combinado (little-endian) \\
+    \hline
+    \texttt{destraSize} & Tamanho da operação em bytes (1 a 8) \\
+    \hline
+    \texttt{destraValueBuffer[8]} & Buffer temporário para armazenar bytes de valor \\
+    \hline
+    \texttt{destraValueIndex} & Índice de controle do buffer de valores \\
+    \hline
+    \end{tabular}
+    \caption{Variáveis da máquina de estados}
+    \label{tab:fsm_vars}
+\end{table}
+
+\subsection{Processamento do Comando PEEK}
+
+O processamento do comando de peek é feito em uma rotina chamada \texttt{processPeekRequest}. Esta rotina, assim que chamada, faz a gravação de volta na serial do echo do cabeçalho recebido, realiza uma checagem de validação para o endereço de memória e o tamanho recebidos, em seguida grava o status da operação. Em caso de sucesso, grava o valor do endereço requisitado na serial.
+
+\begin{lstlisting}[language=C, caption={Pseudocódigo do processamento de PEEK}, label=lst:peek_pseudocode]
+Funcao processPeekRequest():
+    // Enviar cabecalho da resposta
+    Enviar 0xCA via serial
+    Enviar 0xFE via serial
+    Enviar CMD_PEEK via serial
+    
+    // Validar faixa de endereco
+    Se destraAddress < 0x0100 ou 
+       destraAddress > 0x08FF:
+        Enviar STATUS_ADDRESS_RANGE_ERROR via serial
+        Retornar
+    
+    // Validar tamanho da operacao
+    Se destraSize <= 0 ou destraSize > 8:
+        Enviar STATUS_SIZE_ERROR via serial
+        Retornar
+    
+    // Enviar status de sucesso
+    Enviar STATUS_SUCCESS via serial
+    
+    // Ler dados da memoria e enviar
+    Para i de 0 ate destraSize - 1:
+        Ler byte da memoria em 
+            destraAddress + i -> valor
+        Enviar valor via serial
+\end{lstlisting}
+
+A Figura \ref{fig:destra_diagrama_sequencia_peek} apresenta o diagrama de sequência das operações 
+envolvidas na execução de um comando peek, desde o envio da requisição pela ferramenta 
+host até o retorno da resposta pelo sistema embarcado, detalhando as etapas de 
+processamento intermediárias.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{recursos/figuras/destra_diagrama_sequencia_peek.png}
+    \caption{Diagrama de estados do sistema de comunicação peek/poke}
+    \label{fig:destra_diagrama_sequencia_peek}
+\end{figure}
+
+\subsection{Processamento do Comando POKE}
+
+O processamento do comando poke é realizado em uma rotina chamada \texttt{processPokeRequest}. Nesta rotina, temos um processamento do cabeçalho, validação e status de resposta análogo ao processamento do peek. Em seguida, a rotina faz a sobrescrita dos bytes de valor recebidos no endereço de memória especificado pelo comando recebido.
+
+\begin{lstlisting}[language=C, caption={Pseudocódigo do processamento de POKE}, label=lst:poke_pseudocode]
+Funcao processPokeRequest():
+    // Enviar cabecalho da resposta
+    Enviar 0xCA via serial
+    Enviar 0xFE via serial
+    Enviar CMD_POKE via serial
+    
+    // Validar faixa de endereco
+    Se destraAddress < 0x0100 ou 
+       destraAddress > 0x08FF:
+        Enviar STATUS_ADDRESS_RANGE_ERROR via serial
+        Retornar
+    
+    // Validar tamanho da operacao
+    Se destraSize <= 0 ou destraSize > 8:
+        Enviar STATUS_SIZE_ERROR via serial
+        Retornar
+    
+    // Escrever dados na memoria
+    Para i de 0 ate destraSize - 1:
+        Escrever destraValueBuffer[i] 
+            em memoria no endereco destraAddress + i
+    
+    // Enviar status de sucesso
+    Enviar STATUS_SUCCESS via serial
+    
+    // Ecoar de volta os dados escritos
+    Para i de 0 ate destraSize - 1:
+        Ler byte da memoria em 
+            destraAddress + i -> valor
+        Enviar valor via serial
+\end{lstlisting}
+
+A Figura \ref{fig:destra_diagrama_sequencia_poke} apresenta o diagrama de sequência das operações envolvidas na execução de um comando poke, desde o envio da requisição pela ferramenta host até o retorno da resposta pelo sistema embarcado, detalhando as etapas de 
+validação, escrita em memória e confirmação.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{recursos/figuras/destra_diagrama_sequencia_poke.png}
+    \caption{Diagrama de estados do sistema de comunicação peek/poke}
+    \label{fig:destra_diagrama_sequencia_poke}
+\end{figure}
+
+\section{Implementação no Cliente Host}
+
+A ferramenta host foi desenvolvida em Python, aproveitando bibliotecas de suporte a comunicação serial (como \textit{pyserial}). Para simplificar a interação, foi criada uma interface gráfica denominada DESTRA UI, que oferece:
+
+\begin{itemize}
+    \item Conexão automática à porta serial.
+    \item Carregamento de símbolos a partir de arquivos ELF/DWARF, permitindo ao usuário trabalhar com nomes de variáveis em vez de endereços.
+    \item Seleção interativa de variáveis para operações de leitura e escrita.
+    \item Seleção de variáveis para o comando peek.
+    \item Seleção de variáveis e valor para o comando poke.
+    \item Um mecanismo simples de \textit{continuous peek} (leitura automática a cada ciclo do valor das variáveis selecionadas). Onde é possível escolher a frequencia de envio de comandos peek para o microntrolador.
+    \item Histórico de comandos e registro de logs para análise.
+\end{itemize}
+
+Essa abordagem facilita o uso por profissionais que não possuem familiaridade com ferramentas de baixo nível, ao mesmo tempo em que garante flexibilidade para desenvolvedores avançados.
+
+A Figura \ref{fig:destra_diagrama_sequencia_ferramenta_host} fornece uma representação esquemática das interações temporais entre os componentes do sistema durante a execução de uma operação peek. O diagrama de sequência permite uma compreensão clara e precisa do protocolo de comunicação implementado, evidenciando: (a) o ponto de iniciação no módulo de interface do usuário, (b) o processamento de decodificação e transmissão, (c) o 
+tratamento e execução no microcontrolador, e (d) a retransmissão e decodificação dos 
+dados na ferramenta host. Esta estrutura hierarquizada garante a rastreabilidade 
+completa da operação e facilita a validação e verificação do protocolo.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{recursos/figuras/destra_diagrama_sequencia_ferramenta_host.png}
+    \caption{Diagrama de sequência da operação peek. O fluxo ilustra as interações 
+    temporais entre a interface DESTRA UI, o módulo de protocolo Python, a comunicação 
+    serial UART, e a máquina de estados do sistema embarcado, demonstrando o ciclo 
+    completo request/response desde a requisição do usuário até a exibição dos dados 
+    recuperados da memória.}
+    \label{fig:destra_diagrama_sequencia_ferramenta_host}
+\end{figure}
+
+Este diagrama é fundamental para compreender a arquitetura em camadas do sistema, 
+evidenciando como a separação de responsabilidades entre componentes garante uma 
+solução modular, testável e facilmente extensível.
+
+\subsection{Arquitetura da Ferramenta Host}
+
+A implementação da ferramenta é feita em três scripts Python:
+
+\begin{description}
+    \item[\texttt{destra.py}:] Contém a implementação do protocolo proposto neste trabalho, análogo ao que foi apresentado anteriormente.
+    
+    \item[\texttt{destra\_ui.py}:] Implementa a interface gráfica da aplicação juntamente com suas ações.
+    
+    \item[\texttt{data\_dictionary.py}:] Implementa um parser do formato ELF/DWARF que cria um dicionário de dados relacionando os nomes de variáveis declarados no código fonte embarcado com seus atributos: endereço em memória, tipo de dado, tamanho.
+\end{description}
+
+\subsection{Procedimento Operacional}
+
+Para realizar a operação de um comando peek, são necessários os seguintes passos:
+
+\begin{enumerate}
+    \item Conectar fisicamente o host (PC) onde a ferramenta é executada ao Arduino UNO via cabo USB.
+    \item Compilar para o Arduino UNO o código ao qual se deseja instrumentar, contendo a implementação embarcada do protocolo destra.
+    \item Utilizando a IDE do Arduino, exporte o arquivo ELF/DWARF.
+    \item Em sequência, abrir a ferramenta e selecionar a porta de comunicação correta (a ferramenta implementa um script interno que detecta a porta serial associada ao Arduino).
+    \item Carregar o arquivo ELF/DWARF associado ao código fonte.
+    \item Selecionar as variáveis de interesse na lista de variáveis à esquerda.
+    \item Realizar o comando de peek.
+    \item Realizar o comando de poke (opcional), preenchendo a célula poke disponível na tabela de monitoramento com o valor desejado.
+\end{enumerate}
+
+A Figura \ref{fig:destra_ferramenta_host} apresenta a interface gráfica da ferramenta DESTRA UI, evidenciando os principais componentes: o painel de seleção de porta serial, o carregador de arquivo ELF/DWARF, a lista de variáveis disponíveis e a tabela de monitoramento onde é possível realizar operações de peek e poke de forma intuitiva.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{recursos/figuras/destra_ferramenta_host.png}
+    \caption{Interface gráfica da ferramenta DESTRA UI. A tela apresenta os elementos 
+    principais para operação da ferramenta: (a) seleção de porta serial, (b) carregamento 
+    de arquivo ELF/DWARF, (c) painel de busca e seleção de variáveis, (d) tabela de 
+    monitoramento com operações de peek e poke, e (e) console de log para diagnóstico.}
+    \label{fig:destra_ferramenta_host}
+\end{figure}
+
+\subsection{Formatos ELF e DWARF}
+
+O formato \textbf{Executable and Linkable Format} (ELF) é um padrão amplamente utilizado em sistemas Unix e em arquiteturas embarcadas para representar executáveis, bibliotecas compartilhadas e arquivos objeto. Desenvolvido inicialmente pela Unix System Laboratories e posteriormente adotado pelo projeto System V Release 4, o ELF tornou-se o formato predominante devido à sua portabilidade e flexibilidade.
+
+Estruturalmente, um arquivo ELF organiza-se em seções e segmentos. As seções contêm informações como código executável, dados estáticos e tabelas de símbolos, enquanto os segmentos representam as partes efetivamente carregadas em memória durante a execução. Essa separação permite que o ELF seja utilizado tanto no processo de compilação e linkagem quanto em tempo de execução.
+
+Complementarmente, o \textbf{Debugging With Attributed Record Formats} (DWARF) é um padrão de descrição de informações de depuração que pode ser incorporado em arquivos ELF. Trata-se de um formato independente da arquitetura e da linguagem de programação, projetado para prover uma representação detalhada da estrutura interna do programa. O DWARF descreve elementos como tipos de dados, variáveis globais, estruturas, classes, funções, escopos léxicos e até mapeamentos entre instruções de máquina e linhas do código-fonte.
+
+Essas informações são fundamentais para ferramentas de depuração, como debuggers (por exemplo, GDB), que dependem de uma correlação precisa entre o código binário executável e sua representação em alto nível.
+
+Na prática, o ELF atua como o contêiner que organiza e armazena o binário, enquanto o DWARF fornece o conjunto de metadados necessários para inspecionar a execução e o estado do programa. Essa combinação é de particular importância em sistemas embarcados críticos, nos quais o rastreamento de execução, a análise de memória e a validação de fluxos de controle são atividades essenciais para o processo de verificação e certificação.
+
+Portanto, ELF e DWARF podem ser compreendidos como elementos centrais da infraestrutura de desenvolvimento moderno, que oferecem suporte avançado à depuração e análise estática, mas cuja aplicação em sistemas críticos requer adaptação cuidadosa. Sua relevância ultrapassa o ambiente acadêmico e de prototipagem, consolidando-se como referência técnica na indústria de software embarcado.
+
+A Figura \ref{fig:destra_diagrama_sequencia_parser_elf} descreve a sequência do fluxo de carregamento do dicionário de dados na aplicação ferramenta host.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{recursos/figuras/destra_diagrama_sequencia_parser_elf.png}
+    \caption{Diagrama de sequência da operação de leitura do arquivo ELF/DWARF.}
+    \label{fig:destra_diagrama_sequencia_parser_elf}
+\end{figure}
+
+\section{Considerações sobre Extensibilidade}
+
+Embora o protocolo atual implemente apenas as operações básicas de peek e poke, sua estrutura foi concebida com extensibilidade em mente. Entre as funcionalidades previstas para evolução estão:
+
+\begin{itemize}
+    \item Suporte a múltiplas arquiteturas através da implementação de uma camada de abstração de hardware HAL (\textit{hardware abstraction layer}).
+    \item Inclusão de uma fila de comandos para processamento otimizado em casos de vários comandos chegarem ao mesmo tempo sem risco de perda de comandos.
+    \item Inclusão de um número de sequência no cabeçalho (se a opção acima for implementada).
+    \item Inclusão de mecanismos de integridade (CRC, checksums).
+    \item Extensão para comandos de \textit{continuous peek} e \textit{continuous poke}.
+    \item Suporte a tipos de dados complexos como structs, unions e arrays.
+    \item Comandos de consulta de outras informações relativas ao sistema embarcado, como CRC do software carregado (muito útil para verificação em testes).
+\end{itemize}
+
+Essas perspectivas reforçam o caráter modular e aberto da solução, permitindo sua adoção em diferentes cenários industriais e acadêmicos.
+
+\section{Resumo do Capítulo}
+
+A concepção e implementação do protocolo de comunicação peek/poke mostraram-se eficazes como solução de baixo custo e alta portabilidade para depuração em sistemas embarcados. O uso de uma máquina de estados simples, aliada a comandos minimamente estruturados, garante determinismo na interpretação das mensagens e confiabilidade na execução das operações de leitura e escrita em memória.
+
+Essa abordagem reduz a complexidade de integração, ao mesmo tempo em que mantém a robustez necessária para cenários de prototipagem e análise em tempo real. A modularidade da solução permite a expansão do protocolo com novos comandos ou mecanismos de segurança sem comprometer o desempenho ou exigir modificações estruturais profundas.
+
+A distinção clara entre software embarcado e ferramenta host garante separação de responsabilidades, facilitando a manutenção, evolução e adaptação para diferentes plataformas de hardware. Por fim, a integração com a ferramenta host em Python e a interface DESTRA UI evidencia a preocupação em tornar a solução acessível tanto para desenvolvedores experientes quanto para usuários com menor familiaridade com ambientes de baixo nível.
+
+Assim, o protocolo consolidou-se como um recurso que une praticidade, eficiência e potencial de evolução, estabelecendo a base para futuras melhorias no contexto de depuração e instrumentação de sistemas críticos.

@@ -1,0 +1,90 @@
+\chapter{Introdução}
+
+\section{Contextualização}
+
+A depuração de sistemas embarcados críticos de tempo real é de suma importância, pois assegura a segurança, a confiabilidade e a aderência aos requisitos de sistema. No que diz respeito aos requisitos de sistemas que devem ser desdobrados em requisitos de software para sistemas críticos, como os sistemas aeroespaciais aderentes à norma DO-178C, é necessário comprovar a rastreabilidade do código associado aos requisitos de software para a devida geração de evidência de cobertura de requisitos.
+
+O desafio, portanto, está associado a como, em testes de caixa preta, comprovar que requisitos estão sendo cumpridos. Para tais testes, usualmente estimula-se o sistema com entradas e coletam-se dados na saída. Este tipo de teste cobre requisitos de sistema no nível de integração de sistemas; porém, estes não são os únicos requisitos a serem verificados em um sistema crítico.
+
+Muitos requisitos detalham estados ou cálculos intermediários de um sistema, de forma que sua aplicação nem sempre é passível de observação na saída do sistema. Existem ainda requisitos emergentes ou derivados, que surgem da necessidade de se criar uma solução no software para resolver um problema gerado pela solução de um requisito de sistema. Para tais requisitos, não é possível realizar medições nem, muitas vezes, estímulos de entrada em um teste de caixa preta.
+
+Em sistemas de tempo real, cálculos e estados internos ao sistema estão associados à dimensão do tempo, usualmente sendo considerado o tempo de execução, ciclo ou de taxa como o tempo máximo permitido para a execução completa do ciclo do software, ou seja:
+
+\begin{enumerate}
+    \item Leitura e processamento de entradas;
+    \item Cálculos com valores provenientes destas entradas (e valores provenientes de estados anteriores);
+    \item Gravação em saída dos valores de cálculo.
+\end{enumerate}
+
+Neste modelo de execução, o software está submetido aos requisitos que definem margens de segurança, como o ``worst case execution time'' (WCET), o qual define quanto tempo o software pode ocupar no ciclo de execução total do sistema. Este tipo de requisito reserva um slot de tempo no sistema para o qual o software poderá ocupar na execução do seu ciclo. É necessária uma garantia de que o software em nenhum momento exceda o tempo total alocado, o qual vem acompanhado de uma margem de segurança.
+
+Além do WCET, temos as análises de ``modified condition/decision coverage'' (MCDC), que são critérios de cobertura de testes estruturais do código. Este rigoroso teste verifica as seguintes condições:
+
+\begin{enumerate}
+    \item Cada condição atômica (sub-expressão booleana dentro de uma decisão) foi avaliada como verdadeira e falsa pelo menos uma vez.
+    \item Cada decisão composta (por exemplo, \texttt{if (A \&\& B)}) foi avaliada como verdadeira e falsa pelo menos uma vez.
+    \item Cada condição influencia independentemente o resultado da decisão, ou seja, é preciso projetar testes que mostrem que mudar apenas uma condição altera o resultado da decisão.
+\end{enumerate}
+
+Portanto, como podemos verificar se requisitos de sistema, requisitos emergentes e de segurança estão sendo cumpridos pelo software, é necessária a verificação de valores e estados internos do software ao longo do tempo de execução. Assim, a questão central é: Como verificar tais valores sem interferir diretamente nos cálculos de valores e estados do sistema?
+
+O uso de ferramentas tradicionais de \textit{debug} de software é amplamente conhecido e utilizado na indústria de software embarcado nos estágios iniciais do desenvolvimento do software, sendo muito útil para eliminar falhas e detectar erros iniciais de codificação dos requisitos. Ao se escolher a solução de hardware para o sistema, seleciona-se em conjunto, ou mesmo é fornecido pelo fabricante, um kit de desenvolvimento de software composto por:
+
+\begin{itemize}
+    \item Compilador para a linguagem de alto nível (normalmente C ou C++) para o hardware alvo;
+    \item Algum mecanismo de comunicação entre o computador usado para o desenvolvimento do software e o hardware alvo;
+    \item Um sistema de leitura e injeção de valores em memória do hardware;
+    \item Alguma ferramenta de software para visualização e \textit{debug} de código, fazendo uso desta infraestrutura de comunicação e leitura/injeção de valores.
+\end{itemize}
+
+Porém, este tipo de ferramenta é útil apenas para os desenvolvedores do software. Além de custosas e de complexa operação, estas ferramentas são genéricas e não proveem um mecanismo específico para o sistema em desenvolvimento. Há ainda um problema em seu uso nas etapas de integração e testes de integração de sistemas, onde mais de um sistema deve interagir em conjunto, além de campanhas de ensaios onde o sistema deve interagir com outros sistemas em seu estado final e com a mínima \textit{rigagem} requerida.
+
+\section{Motivação}
+
+A depuração de sistemas embarcados críticos, especialmente aqueles de tempo real, enfrenta limitações quando se utilizam apenas técnicas tradicionais de testes de caixa preta. Muitos requisitos, incluindo requisitos derivados ou emergentes, só podem ser verificados por meio da observação de estados e valores internos do software durante sua execução. Ferramentas de depuração fornecidas pelos fabricantes, embora úteis, são geralmente complexas, custosas e voltadas ao desenvolvimento inicial, não sendo adequadas para fases de integração ou testes finais.
+
+Nesse contexto, torna-se relevante desenvolver soluções mais simples e específicas que permitam a inspeção controlada de estados internos do sistema sem comprometer sua execução. Nos últimos anos, plataformas de prototipagem como Arduino e ESP32 popularizaram o uso de utilitários de depuração em tempo real, baseados nos mecanismos peek/poke. Essas ferramentas permitem a leitura e a escrita em variáveis de memória durante a execução do sistema, oferecendo simplicidade e agilidade para o desenvolvimento de aplicações de propósito geral.
+
+Entretanto, em sistemas embarcados críticos — como os empregados na indústria aeroespacial, automotiva ou médico-hospitalar — tais soluções não podem ser utilizadas diretamente, uma vez que não atendem aos requisitos de certificação impostos por normas regulatórias internacionais. No setor aeronáutico, por exemplo, o DO-178C (Software Considerations in Airborne Systems and Equipment Certification) estabelece critérios rigorosos de desenvolvimento, validação e rastreabilidade de requisitos para softwares embarcados. De forma complementar, o DO-330 (Software Tool Qualification Considerations) regulamenta o uso de ferramentas de apoio, exigindo qualificação formal caso seus resultados interfiram em atividades de verificação.
+
+De maneira análoga, outras indústrias impõem normas específicas, como a ISO 26262 no setor automotivo, a IEC 62304 para dispositivos médicos e a IEC 61508 em sistemas de segurança funcional. Diante dessas exigências, fabricantes de microcontroladores e plataformas comerciais não disponibilizam, em geral, soluções de depuração do tipo peek/poke aptas a serem empregadas diretamente em sistemas críticos.
+
+Ferramentas amplamente difundidas, como o Arduino Serial Monitor, o ESPIDF Monitor ou ambientes de desenvolvimento integrados (IDEs) fornecidos por fornecedores como STMicroelectronics (STM32CubeIDE) e Espressif, não contemplam processos de certificação de software e tampouco oferecem rastreabilidade de requisitos ou cobertura de testes exigida para níveis de criticidade elevados (DAL A e B, conforme o DO-178C).
+
+Dessa forma, torna-se necessária a criação interna (in-house) de soluções de depuração adaptadas (tailored) ao sistema em desenvolvimento, de modo que o protocolo de comunicação, a arquitetura de software embarcado e as ferramentas de suporte sejam especificados, implementados e verificados em conformidade com o nível de garantia de desenvolvimento (Design Assurance Level – DAL) aplicável. Esse processo garante que cada requisito funcional seja rastreado, testado e documentado, permitindo que a ferramenta de depuração não comprometa a conformidade regulatória nem a integridade do sistema em operação.
+
+\section{Objetivos}
+
+\subsection{Objetivo Geral}
+
+Propor, implementar e validar um protocolo simples de peek e poke para observação e modificação controlada de estados internos em sistemas embarcados de tempo real, a fim de apoiar atividades de teste e depuração.
+
+\subsection{Objetivos Específicos}
+
+\begin{itemize}
+    \item Estudar os conceitos de depuração em sistemas embarcados e protocolos de comunicação aplicáveis;
+    \item Definir os requisitos e a arquitetura de um protocolo de peek e poke;
+    \item Implementar o protocolo em um microcontrolador de baixo custo (ex.: Arduino);
+    \item Desenvolver uma ferramenta cliente para interação com o protocolo;
+    \item Avaliar o funcionamento do protocolo em cenários de teste representativos.
+\end{itemize}
+
+\section{Justificativa}
+
+A proposta deste trabalho se justifica pela necessidade de ferramentas acessíveis, específicas e de baixo custo para o teste e depuração de sistemas embarcados críticos. Diferentemente de soluções comerciais, que exigem infraestrutura complexa, o protocolo aqui desenvolvido visa oferecer uma alternativa prática tanto em contextos acadêmicos quanto em aplicações industriais. Assim, contribui para a formação de profissionais em sistemas embarcados, possibilita o aprofundamento em técnicas de teste e depuração, e ainda pode ser expandido em pesquisas futuras, incluindo integração com ambientes de simulação e ferramentas de verificação formal.
+
+\section{Estrutura do Trabalho}
+
+Este trabalho está organizado da seguinte forma:
+
+\begin{itemize}
+    \item \textbf{Capítulo 1 -- Introdução:} apresenta a contextualização do tema, a motivação, os objetivos, a justificativa e a organização do trabalho.
+    
+    \item \textbf{Capítulo 2 -- Fundamentação Teórica:} descreve os conceitos de sistemas embarcados de tempo real, técnicas de depuração e protocolos de comunicação, além de trabalhos relacionados.
+    
+    \item \textbf{Capítulo 3 -- Desenvolvimento do Protocolo:} detalha a arquitetura, a especificação e a implementação do protocolo proposto, tanto no microcontrolador quanto na ferramenta cliente.
+    
+    \item \textbf{Capítulo 4 -- Metodologia e Testes:} apresenta o ambiente de experimentação, a metodologia de avaliação e os resultados obtidos.
+    
+    \item \textbf{Capítulo 5 -- Conclusão e Trabalhos Futuros:} reúne as conclusões do trabalho, suas limitações e as perspectivas de continuidade.
+\end{itemize}

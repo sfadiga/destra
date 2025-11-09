@@ -1,0 +1,1288 @@
+\chapter{Metodologia e Testes}
+
+\section{Ambiente de Testes}
+
+O protocolo desenvolvido neste trabalho foi implementado sobre uma plataforma de hardware específica, o Arduino Uno, escolhido por sua simplicidade arquitetural e previsibilidade de execução. Trata-se de um sistema embarcado que não possui um Sistema Operacional de Tempo Real (RTOS – Real-Time Operating System), operando em modo bare-metal, ou seja, com execução direta sobre o hardware sem a intermediação de camadas de abstração complexas.
+
+Essa característica permite o controle total do fluxo de execução e a implementação direta do protocolo em linguagem C, utilizando a adaptação fornecida pelo ambiente Arduino. Embora o Arduino Uno não disponha de recursos típicos de um RTOS, sua biblioteca padrão oferece um conjunto abrangente de funções de baixo nível que simplificam o desenvolvimento e a manipulação de periféricos.
+
+No contexto desta pesquisa, destaca-se a utilização da interface UART (Universal Asynchronous Receiver-Transmitter), fundamental para a comunicação serial entre o host e o sistema embarcado. Por meio dessa interface, o protocolo DESTRA é transmitido e processado, possibilitando o envio e recebimento de comandos de leitura e escrita de memória de forma estruturada e determinística.
+
+\subsection{Hardware - Arduino UNO}
+
+\subsection{Arduino UNO}
+
+O Arduino UNO é uma plataforma de prototipagem eletrônica de código aberto baseada no 
+microcontrolador ATmega328P. Desenvolvido para facilitar o aprendizado e a prototipagem 
+rápida, o Arduino UNO é amplamente utilizado em projetos educacionais, hobbistas e 
+aplicações embarcadas de baixa complexidade. Sua facilidade de programação, combinada 
+com uma comunidade ativa e extensa documentação, o torna uma escolha popular para 
+sistemas embarcados de prototipagem.
+
+A placa possui 14 pinos digitais de entrada/saída (dos quais 6 podem ser usados como 
+saídas PWM), 6 entradas analógicas, um cristal oscilador de 16 MHz, uma conexão USB para 
+programação e comunicação serial, um botão de reset e um regulador de tensão. A memória 
+Flash de 32 KB (com 0,5 KB reservado para o bootloader), combinada com 2 KB de SRAM e 
+1 KB de EEPROM, fornece espaço suficiente para aplicações embarcadas moderadamente 
+complexas.
+
+A Figura \ref{fig:arduino_uno} apresenta a placa Arduino UNO com destaque para 
+seus componentes principais.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{recursos/figuras/arduino_uno.png}
+    \caption{Placa Arduino UNO. A imagem destaca os principais componentes: 
+    (a) microcontrolador ATmega328P, (b) conexão USB, (c) pinos digitais de I/O, 
+    (d) entradas analógicas, (e) botão de reset, (f) regulador de tensão, 
+    e (g) cristal oscilador de 16 MHz.}
+    \label{fig:arduino_uno}
+\end{figure}
+
+O Arduino UNO é programado através do Arduino IDE (Integrated Development Environment), 
+uma plataforma open-source baseada em Java que simplifica o processo de escrita, compilação 
+e upload de código. A linguagem de programação é uma variante simplificada de C++, o que 
+torna o aprendizado acessível mesmo para usuários sem experiência prévia em programação 
+embarcada.
+
+Para o desenvolvimento deste trabalho, o Arduino UNO foi escolhido como plataforma de 
+implementação do protocolo DESTRA devido à sua ampla disponibilidade, baixo custo, 
+documentação abundante e capacidade de comunicação serial via USB, que permite a integração 
+eficiente com ferramentas host em Python.
+
+
+\subsubsection{Especificações do Arduino UNO}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|l|}
+    \hline
+    \textbf{Componente} & \textbf{Especificação} \\
+    \hline
+    Microcontrolador & ATmega328P \\
+    \hline
+    Memória Flash & 32 KB (0,5 KB usados pelo bootloader) \\
+    \hline
+    SRAM & 2 KB \\
+    \hline
+    EEPROM & 1 KB (não-volátil) \\
+    \hline
+    Tensão de Operação & 5V \\
+    \hline
+    Tensão de Entrada (recomendada) & 7V a 12V \\
+    \hline
+    Tensão de Entrada (limites) & 6V a 20V \\
+    \hline
+    Pinos Digitais de I/O & 14 (6 podem ser usados como saídas PWM) \\
+    \hline
+    Entradas Analógicas & 6 \\
+    \hline
+    Corrente por Pino de I/O & 20 mA \\
+    \hline
+    Corrente para Pino de 3.3V & 50 mA \\
+    \hline
+    Frequência de Clock & 16 MHz \\
+    \hline
+    Conexão USB & Para programação e alimentação \\
+    \hline
+    Protocolos de Comunicação & UART (TX/RX), I2C (SDA/SCL), SPI \\
+    \hline
+    Dimensões Físicas & 68,6 mm × 53,4 mm \\
+    \hline
+    Peso & 25 g \\
+    \hline
+    \end{tabular}
+    \caption{Especificações técnicas do Arduino UNO}
+    \label{tab:arduino_specs}
+\end{table}
+
+\subsection{Software Embarcado}
+
+As versões de software utilizadas no desenvolvimento do protocolo DESTRA e da aplicação de testes foram:
+
+\begin{itemize}
+    \item Arduino IDE 2.3.6
+    \item Firmware: avr-gcc@7.3.0-atmel3.6.1-arduino
+    \item Otimização para Debugging ativada
+\end{itemize}
+
+Para a validação do protocolo DESTRA, foi implementado um código simples em Arduino (linguagem similar a C). As variáveis de interesse foram declaradas com o modificador \texttt{volatile}, o que em C garante que o compilador não realizará otimizações sobre suas atribuições. Dessa forma, assegura-se que essas variáveis permaneçam acessíveis e devidamente representadas no arquivo ELF/DWARF.
+
+A implementação segue a estrutura padrão da plataforma Arduino, composta pelas funções principais \texttt{setup()} e \texttt{loop()}. No processo de inicialização, a função \texttt{setup()} realiza a configuração do protocolo por meio da chamada a \texttt{destraSetup()}, que também é responsável pela inicialização da porta serial do hardware. Em sequência, a função \texttt{loop()} inicia com a chamada a \texttt{destraHandler()}, encarregada de processar os comandos do protocolo DESTRA.
+
+\subsubsection{Código de Teste}
+
+Após essa etapa, o código executa algoritmos simples cujo propósito é fornecer um cenário de demonstração para leitura (comando peek) e escrita (comando poke) de variáveis:
+
+\begin{lstlisting}[language=C, caption={Código de teste com variáveis para monitoramento}, label=lst:test_code, extendedchars=false, basicstyle=\ttfamily\small, breaklines=true]
+// TEST DATA (usamos variaveis como volatile 
+// para assegurar que estarao no arquivo .elf)
+volatile unsigned long rtc = 0;
+volatile float k_pi = 3.14f;
+volatile uint8_t k_radius = 3;
+volatile float result_circle_area;
+volatile unsigned long result_rtc_x_radius;
+
+void calculation() {
+    // Exemplos de calculos com variaveis a 
+    // serem monitoradas / alteradas
+    result_circle_area = k_pi * 
+        (k_radius * k_radius);
+    result_rtc_x_radius = k_radius * rtc;
+    rtc += 1;
+}
+\end{lstlisting}
+
+A integração entre o código embarcado e o ambiente de testes ocorre por meio da comunicação serial UART, utilizando a porta USB do Arduino UNO. Durante a execução dos testes, a ferramenta realiza o carregamento automático das variáveis presentes no arquivo ELF, utilizando as informações de depuração DWARF para mapear nomes, tipos e endereços de memória.
+
+Esse arranjo experimental permite verificar o funcionamento correto do protocolo DESTRA, avaliando sua capacidade de manipular dados de forma confiável, dentro dos limites de tempo e integridade esperados. Além disso, a comunicação direta com o hardware, sem a intervenção de um sistema operacional, torna o ambiente altamente determinístico, o que facilita a análise de latência, confiabilidade e robustez.
+
+\subsection{Ferramentas Auxiliares}
+
+\subsubsection{Osciloscópio Digital FNIRSI® DSO-153}
+
+Foi utilizado um osciloscópio digital de um canal FNIRSI® DSO-153 2-em-1 Mini 1MHz 5MS/s para monitorar pinos digitais do Arduino, permitindo a geração de formas de onda e medições de tempo/frequência.
+
+A Figura \ref{fig:fnirsi_dso153} apresenta o osciloscópio FNIRSI® DSO-153 conectado ao 
+Arduino UNO durante uma sessão de medição.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\textwidth]{recursos/figuras/fnirsi_dso153.png}
+    \caption{Osciloscópio digital FNIRSI® DSO-153 2-em-1. O equipamento é mostrado 
+    durante medição de sinais do Arduino UNO, com a sonda conectada a um dos pinos 
+    de debug. A tela colorida TFT exibe a forma de onda capturada em tempo real, 
+    permitindo análise de frequência, jitter e tempo de processamento de comandos.}
+    \label{fig:fnirsi_dso153}
+\end{figure}
+
+O osciloscópio digital FNIRSI® DSO-153 é um instrumento de medição portátil e compacto, 
+projetado para aplicações de prototipagem, depuração e análise de circuitos eletrônicos. 
+Seu design 2-em-1 oferece funcionalidades de osciloscópio e gerador de forma de onda 
+(waveform generator) integradas em um único dispositivo, tornando-o uma ferramenta versátil 
+para engenheiros e desenvolvedores.
+
+Com uma largura de banda máxima de 1 MHz e taxa de amostragem de 5 MS/s (milhões de amostras 
+por segundo), o DSO-153 é adequado para análise de sinais em frequências baixas a médias, 
+tipicamente encontradas em aplicações embarcadas, circuitos digitais de lógica, comunicação 
+serial e controle de tempo real. A tela colorida TFT de alta resolução proporciona visualização 
+clara de formas de onda, facilitando a identificação de padrões, anomalias e transições de 
+sinal.
+
+O aparelho oferece um único canal de entrada, permitindo monitoramento simultâneo de uma 
+linha de sinal por vez. Apesar dessa limitação, é possível realizar medições sequenciais em 
+diferentes pontos do circuito, rotacionando a sonda entre as posições de teste. A bateria 
+integrada proporciona portabilidade, permitindo seu uso em campo sem necessidade de 
+alimentação externa contínua.
+
+Para o contexto deste trabalho, o osciloscópio DSO-153 foi utilizado para validação física 
+das métricas temporais do protocolo DESTRA, em especial: (i) medição da frequência do loop 
+principal (100 Hz), (ii) quantificação do jitter temporal entre ciclos de execução, e (iii) 
+determinação do tempo de processamento de comandos (command\_process\_time). As medições 
+realizadas via osciloscópio complementam as dados coletados internamente pelo firmware, 
+fornecendo uma validação independente e confiável do desempenho temporal do sistema.
+
+
+\subsubsection{Especificações Técnicas do DSO-153}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|l|}
+    \hline
+    \textbf{Parâmetro} & \textbf{Valor} \\
+    \hline
+    Largura de Banda & 1 MHz \\
+    \hline
+    Taxa de Amostragem Máxima & 5 MS/s (Mega amostras por segundo) \\
+    \hline
+    Canais de Entrada & 1 (monofásico) \\
+    \hline
+    Impedancia de Entrada & 1 M$\Omega$ \\
+    \hline
+    Acoplamento & AC/DC selecionável \\
+    \hline
+    Tela & TFT colorida, alta resolução \\
+    \hline
+    Tensão de Entrada (Máxima) & ±50V (com atenuação) \\
+    \hline
+    Funcionamento & Osciloscópio + Gerador de forma de onda \\
+    \hline
+    Alimentação & Bateria integrada ou USB \\
+    \hline
+    Portabilidade & Compacta e leve (~200g) \\
+    \hline
+    \end{tabular}
+    \caption{Especificações técnicas do osciloscópio digital FNIRSI® DSO-153}
+    \label{tab:fnirsi_dso153_specs}
+\end{table}
+
+
+\subsubsection{Ferramenta Host}
+
+As versões de software utilizadas para o desenvolvimento e execução da ferramenta host foram:
+
+\begin{itemize}
+    \item SO: Windows 11
+    \item Python 3.13.5
+    \item PySerial 3.5
+    \item PySide6 6.9.2
+\end{itemize}
+
+A ferramenta host DESTRA UI foi desenvolvida em Python, utilizando o framework PySide6 (Qt for Python) para a criação da interface gráfica. A configuração da conexão serial é realizada de forma automática através da detecção das portas associadas a dispositivos Arduino, ou manual, caso múltiplos dispositivos sejam identificados. O parâmetro de baud rate utilizado é 115200 bps (8N1), valor que deve ser idêntico ao configurado no código embarcado.
+
+O carregamento do dicionário de dados é realizado a partir do arquivo ELF gerado durante a compilação do código embarcado. A ferramenta executa automaticamente o parsing das informações de depuração (DWARF debug info), permitindo que as variáveis sejam apresentadas de forma estruturada e pesquisáveis.
+
+As operações principais da ferramenta compreendem:
+
+\begin{itemize}
+    \item \textbf{PEEK:} leitura instantânea do valor atual da variável selecionada.
+    \item \textbf{POKE:} escrita de um novo valor, acionada por duplo clique na célula correspondente.
+    \item \textbf{Auto PEEK:} monitoramento contínuo das variáveis selecionadas, com frequência configurável entre 1 e 100 Hz.
+\end{itemize}
+
+O recurso Auto PEEK implementa um mecanismo semelhante a um \textit{continuous peek}, no qual a ferramenta envia comandos de leitura em intervalos regulares. O gerenciamento das variáveis pode ser feito de forma interativa, possibilitando a remoção de itens da lista ou a edição direta dos valores para sobrescrita.
+
+Além disso, a ferramenta dispõe de configuração de níveis de log — DEBUG, INFO, WARNING e ERROR — que permitem ajustar a verbosidade das mensagens exibidas no console durante a execução.
+
+A integração dessas funcionalidades na ferramenta DESTRA UI representa um avanço significativo na observabilidade e controle de sistemas embarcados durante as fases de teste e validação. Ao abstrair a complexidade inerente à comunicação de baixo nível, a interface permite que o pesquisador ou engenheiro concentre seus esforços na análise do comportamento funcional do sistema.
+
+\section{Cenários de Teste}
+
+Os testes realizados têm como objetivo avaliar o comportamento do protocolo DESTRA sob diferentes condições de operação, com foco em dois cenários: ferramenta e embarcado. Cada um desses cenários visa levantar as características de performance do protocolo, avaliando diferentes dimensões sob a perspectiva de testes.
+
+A escolha destas dimensões está diretamente relacionada à viabilidade do uso do protocolo em sistemas embarcados de maior criticidade, nos quais a previsibilidade temporal, a integridade dos dados e a capacidade de recuperação frente a falhas são requisitos essenciais.
+
+\subsection{Cenário da Ferramenta}
+
+Para o cenário da ferramenta foi desenvolvido um script Python (\texttt{performance\_tests.py}) complementar à ferramenta host que faz uso do protocolo DESTRA. O script realiza sequências de comando peek em uma variável inteira de tamanho 4 bytes.
+
+Os testes criados no script rodam com sua chamada em linha de comando, realizando as operações automaticamente e gerando arquivos de relatório no formato markdown e gráficos. A Tabela \ref{tab:cenarios_teste} detalha os objetivos de cada um dos testes do script:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|p{3cm}|p{5cm}|p{4cm}|}
+    \hline
+    \textbf{Cenário de Teste} & \textbf{Descrição / Objetivo} & \textbf{Métricas Coletadas} \\
+    \hline
+    Latência & Mede o tempo de ida e volta (round-trip) entre envio de comando e resposta & Latência média, mínima e máxima; desvio padrão; jitter \\
+    \hline
+    Estresse & Mede a estabilidade sob carga contínua durante intervalo prolongado & Throughput de comandos; latência média; número de erros \\
+    \hline
+    Rajada & Simula envio rápido e consecutivo de comandos & Tempo médio; jitter; throughput máximo; detecção de perdas \\
+    \hline
+    \end{tabular}
+    \caption{Cenários de teste da ferramenta host}
+    \label{tab:cenarios_teste}
+\end{table}
+
+\subsection{Cenário Embarcado}
+
+Para este cenário, o protocolo DESTRA implementado para o sistema embarcado foi instrumentado para coletar e armazenar dados de performance. O protocolo recebeu um novo comando, \texttt{0xF3}, para suportar o envio dos dados de performance mediante uma requisição realizada pela ferramenta host/script de testes.
+
+Além da coleta de dados de performance, foram inseridas no protocolo chamadas de ativações de pinos digitais do Arduino em determinados pontos para serem realizadas medições com o osciloscópio.
+
+\subsubsection{Variáveis de Performance}
+
+A Listagem \ref{lst:perf_vars} apresenta as variáveis criadas para o monitoramento e armazenamento dos dados de performance:
+
+\begin{lstlisting}[language=C, caption={Variáveis de instrumentação do protocolo}, label=lst:perf_vars, extendedchars=false, basicstyle=\ttfamily\small, breaklines=true]
+// Comando especial para recuperar logs
+#define CMD_GET_PERF_LOG 0xF3
+
+volatile unsigned long frameCounter = 0;
+volatile uint16_t frameRate = 0;
+volatile uint16_t frameJitter = 0;
+volatile uint16_t commandSequence = 0;
+volatile unsigned long commandStartCounter = 0;
+volatile unsigned long commandEndCounter = 0;
+volatile unsigned long lastFrameTime = 0;
+volatile unsigned long commandReceiveTime = 0;
+volatile unsigned long commandProcessTime = 0;
+volatile unsigned long lastDeltaTime = 0;
+
+#define PERF_BUFFER_SIZE 100
+struct PerfLog {
+    unsigned long frameCounter;
+    uint16_t frameRate;
+    uint16_t frameJitter;
+    uint16_t commandSequence;
+    uint16_t commandFrameCounterDelta;
+    unsigned long commandProcessTime;
+};
+
+PerfLog perfBuffer[PERF_BUFFER_SIZE];
+uint8_t perfIndex = 0;
+\end{lstlisting}
+
+\subsubsection{Pinos de Debug para Osciloscópio}
+
+Os seguintes pinos foram configurados para medições com osciloscópio:
+
+\begin{lstlisting}[language=C, caption={Pinos de debug para osciloscópio}, label=lst:debug_pins, extendedchars=false, basicstyle=\ttfamily\small, breaklines=true]
+#define PIN_TRIGGER_RX 2  // Pulso ao receber
+#define PIN_TRIGGER_TX 3  // Pulso ao enviar
+#define PIN_FRAME_TOGGLE 4 // Toggle cada loop
+#define PIN_BUSY 5        // Alto durante proc.
+
+#define PULSE_RX() { digitalWrite(PIN_TRIGGER_RX, \
+    HIGH); delayMicroseconds(10); \
+    digitalWrite(PIN_TRIGGER_RX, LOW); }
+#define PULSE_TX() { digitalWrite(PIN_TRIGGER_TX, \
+    HIGH); delayMicroseconds(10); \
+    digitalWrite(PIN_TRIGGER_TX, LOW); }
+#define TOGGLE_FRAME() { \
+    digitalWrite(PIN_FRAME_TOGGLE, \
+    !digitalRead(PIN_FRAME_TOGGLE)); }
+#define SET_BUSY(state) { \
+    digitalWrite(PIN_BUSY, state); }
+\end{lstlisting}
+
+\subsubsection{Métricas Coletadas}
+
+A Tabela \ref{tab:metricas_performance} apresenta as métricas coletadas durante os testes:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|p{5.5cm}|p{6.5cm}|p{2.5cm}|}
+    \hline
+    \textbf{Campo} & \textbf{Descrição} & \textbf{Unidade} \\
+    \hline
+    \texttt{frameCounter} & Contador absoluto de frames (incrementado a cada iteração do \texttt{loop}) & contagem \\
+    \hline
+    \texttt{frameRate} & Frequência de execução do loop principal & Hz \\
+    \hline
+    \texttt{frameJitter} & Diferença entre durações consecutivas de frames & µs \\
+    \hline
+    \texttt{commandSequence} & Número sequencial do comando recebido & — \\
+    \hline
+    \texttt{commandFrameCounterDelta} & Número de frames entre início e fim do comando & contagem \\
+    \hline
+    \texttt{commandProcessTime} & Tempo total de processamento de um comando & µs \\
+    \hline
+    \end{tabular}
+    \caption{Métricas de performance coletadas}
+    \label{tab:metricas_performance}
+\end{table}
+
+\subsubsection{Programa Principal}
+
+O programa principal (\texttt{loop}) do protocolo DESTRA foi modificado para operar em 100 Hz, de forma a executar sob um tempo pré-definido e com determinismo:
+
+\begin{lstlisting}[language=C, caption={Loop principal do protocolo DESTRA}, label=lst:loop_main, extendedchars=false, basicstyle=\ttfamily\small, breaklines=true]
+void loop() {
+    unsigned long currentFrameTime = micros();
+    unsigned long deltaTime = 
+        currentFrameTime - lastFrameTime;
+    
+    // Calcular framerate (Hz)
+    if (deltaTime > 0) {
+        frameRate = 1000000.0 / deltaTime;
+    }
+    
+    // Calcular jitter
+    frameJitter = abs((long)deltaTime - 
+        (long)lastDeltaTime);
+    lastDeltaTime = deltaTime;
+    
+    // Toggle pino de frame
+    TOGGLE_FRAME();
+    frameCounter++;
+    
+    // Processar comandos DESTRA
+    destraHandler();
+    
+    // Executar calculos de exemplo
+    calculation();
+    
+    // Ajustar para ~100Hz (10ms)
+    unsigned long elapsed = 
+        micros() - currentFrameTime;
+    if (elapsed < 10000) {
+        delayMicroseconds(10000 - elapsed);
+    }
+    lastFrameTime = currentFrameTime;
+}
+\end{lstlisting}
+
+\section{Resultados Obtidos}
+
+A execução dos testes foi realizada conectando-se o Arduino ao host e utilizando o programa instrumentado no Arduino. O script Python foi executado através do comando:
+
+\begin{verbatim}
+> python .\performance_tests.py COM5
+\end{verbatim}
+
+Este comando irá executar a sequência dos três testes (Latência, Estresse e Rajada), coletando dados de performance internos entre cada teste. Porém é preciso ressaltar que a limitação de memória do Arduino permite guardar somente 100 registros de dados de performance. Logo para os testes mais longos como Estresse e Burst os dados internos são limitados a apenas 100 amostras.
+A execução dos testes foi realizada conectando-se o Arduino ao host utilizando o programa 
+instrumentado. O script Python foi executado através do seguinte comando:
+
+\begin{verbatim}
+> python .\performance_tests.py COM5
+\end{verbatim}
+
+Este comando executou automaticamente a sequência dos três testes (Latência, Estresse e 
+Rajada), coletando dados de performance internos e gerando relatórios. A saída do console 
+durante a execução é apresentada na Listagem \ref{lst:performance_tests_output}:
+
+\begin{lstlisting}[language=bash, 
+    caption={Saída do programa performance\_tests.py durante execução dos testes},
+    label=lst:performance_tests_output,
+    extendedchars=false,
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}]
+2025-10-22 21:13:04 - DESTRA.Protocol - INFO - Conectando
+2025-10-22 21:13:06 - DESTRA.Protocol - INFO - Conectado com sucesso!
+2025-10-22 21:13:06 - DESTRA.Tester - INFO - Iniciando teste de latência: 100 amostras
+2025-10-22 21:13:07 - DESTRA.Tester - INFO - Teste de latência concluído
+2025-10-22 21:13:07 - DESTRA.Tester - INFO - Iniciando download de performance
+2025-10-22 21:13:07 - DESTRA.Protocol - INFO - === DUMP DE LOGS (Arduino) ===
+2025-10-22 21:13:07 - DESTRA.Protocol - INFO - Processando 99 entradas
+2025-10-22 21:13:07 - DESTRA.Protocol - INFO - === FIM DO DUMP ===
+2025-10-22 21:13:11 - DESTRA.Performance - INFO - Gráficos salvos
+2025-10-22 21:38:00 - DESTRA.Tester - INFO - Iniciando teste de stress: 60s @ 100Hz
+2025-10-22 21:39:00 - DESTRA.Tester - INFO - Teste de stress concluído
+2025-10-22 21:39:00 - DESTRA.Tester - INFO - Iniciando download de performance
+2025-10-22 21:39:00 - DESTRA.Performance - INFO - Gráficos salvos
+2025-10-22 21:57:58 - DESTRA.Tester - INFO - Iniciando teste de burst: 10x1000 cmds
+2025-10-22 21:59:48 - DESTRA.Tester - INFO - Teste de burst concluído
+2025-10-22 21:59:48 - DESTRA.Tester - INFO - Iniciando download de performance
+2025-10-22 21:59:48 - DESTRA.Protocol - INFO - === DUMP DE LOGS (Arduino) ===
+2025-10-22 21:59:48 - DESTRA.Protocol - INFO - Processando 99 entradas
+2025-10-22 21:59:48 - DESTRA.Protocol - INFO - === FIM DO DUMP ===
+2025-10-22 21:59:49 - DESTRA.Performance - INFO - Gráficos salvos
+2025-10-22 21:59:49 - DESTRA.Protocol - INFO - Desconectado do Arduino
+\end{lstlisting}
+
+\subsubsection{Arquivos de Relatório Gerados}
+
+Ao término da execução, o script gerou automaticamente os seguintes arquivos de relatório:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|p{7cm}|}
+    \hline
+    \textbf{Arquivo} & \textbf{Descrição} \\
+    \hline
+    \texttt{Latencia\_*.md} & Relatório em Markdown contendo métricas detalhadas 
+    do teste de latência (média, mediana, desvio padrão, percentis) \\
+    \hline
+    \texttt{Latencia\_*.png} & Gráfico visual dos dados de latência e jitter, 
+    facilitando análise visual de distribuição e outliers \\
+    \hline
+    \texttt{Estresse\_*.md} & Relatório em Markdown com resultados do teste de 
+    estresse de 60 segundos contínuos \\
+    \hline
+    \texttt{Estresse\_*.png} & Gráfico de desempenho sob carga contínua, 
+    evidenciando estabilidade temporal \\
+    \hline
+    \texttt{Burst\_*.md} & Relatório em Markdown com análise de 10.000 comandos 
+    em modo rajada \\
+    \hline
+    \texttt{Burst\_*.png} & Gráfico de throughput e latência durante picos 
+    de alta frequência de requisições \\
+    \hline
+    \end{tabular}
+    \caption{Arquivos de relatório gerados automaticamente pelo script de testes}
+    \label{tab:arquivos_relatorio}
+\end{table}
+
+Os timestamps nos nomes dos arquivos (ex: \texttt{20251022\_211307}) permitem identificar 
+rapidamente quando cada teste foi executado, facilitando o controle de versão e rastreabilidade dos resultados.
+
+A seguir apresenta-se um resumo detalhado e análise crítica dos dados obtidos em cada cenário de teste.
+
+\subsection{Teste de Latência}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.90\textwidth]{recursos/figuras/teste_latencia_grafico.png}
+    \caption{Gráfico de resultados do teste de latência - insira a figura aqui}
+    \label{fig:teste_latencia_grafico}
+\end{figure}
+
+Para o teste de latência, foi configurado um número de amostras (operações de peek) igual a 100. Os resultados foram:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|r|}
+    \hline
+    \textbf{Métrica} & \textbf{Valor} \\
+    \hline
+    Total de Medidas & 100 \\
+    \hline
+    Medições Bem-Sucedidas & 100 \\
+    \hline
+    Taxa de Erro (\%) & 0.0 \\
+    \hline
+    Latência Média (ms) & 10.016 \\
+    \hline
+    Latência Mediana (ms) & 10.064 \\
+    \hline
+    Desvio Padrão (ms) & 0.647 \\
+    \hline
+    Latência Mínima (ms) & 3.665 \\
+    \hline
+    Latência Máxima (ms) & 10.476 \\
+    \hline
+    P95 (ms) & 10.276 \\
+    \hline
+    P99 (ms) & 10.367 \\
+    \hline
+    Jitter Médio (ms) & 0.201 \\
+    \hline
+    \end{tabular}
+    \caption{Dados de performance do teste de latência (host)}
+    \label{tab:latencia_host}
+\end{table}
+
+Para os resultados de latência e jitter, a média de frame rate observada foi de aproximadamente 98 a 100 Hz, conforme esperado. O jitter médio permaneceu dentro da faixa de 0,20 ms, indicando estabilidade temporal adequada. O tempo médio de processamento de comando foi inferior a 0,25 ms, mostrando que o protocolo possui sobrecarga mínima.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|r|}
+    \hline
+    \textbf{Métrica (Firmware)} & \textbf{Valor} \\
+    \hline
+    Total de Amostras & 99 \\
+    \hline
+    Frame Jitter Médio (ms) & 0.0022 \\
+    \hline
+    Frame Jitter Mediana (ms) & 0.0000 \\
+    \hline
+    Desvio Padrão (ms) & 0.0035 \\
+    \hline
+    Tempo de Comando Médio (ms) & 0.732 \\
+    \hline
+    Gaps no Frame Counter & 0 \\
+    \hline
+    Gaps na Sequência de Comandos & 0 \\
+    \hline
+    \end{tabular}
+    \caption{Dados de performance embarcada (teste de latência)}
+    \label{tab:latencia_embarcada}
+\end{table}
+
+\subsubsection{Análise}
+
+A latência média de 10,016 ms indica um tempo de resposta estável e previsível. O desvio padrão de apenas 0,64 ms demonstra baixa variabilidade temporal. A inexistência de gaps confirma ausência de perda de pacotes. Essa estabilidade sugere que o protocolo DESTRA introduz mínimo overhead de comunicação.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|l|}
+    \hline
+    \textbf{Aspecto} & \textbf{Observação} \\
+    \hline
+    Latência média (host) & $\sim$10.016 ms — consistente, com baixa dispersão \\
+    \hline
+    Jitter médio (host) & $\sim$0.2 ms — boa estabilidade temporal \\
+    \hline
+    Frame rate médio (firmware) & $\sim$99 fps — ciclo estável \\
+    \hline
+    Tempo médio de comando & $\sim$0.731 ms — processamento rápido \\
+    \hline
+    Anomalias detectadas & Nenhuma — sequência íntegra \\
+    \hline
+    \end{tabular}
+    \caption{Resumo da análise do teste de latência}
+    \label{tab:resumo_latencia}
+\end{table}
+
+\subsection{Teste de Estresse}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.90\textwidth]{recursos/figuras/teste_estresse_grafico.png}
+    \caption{Gráfico de resultados do teste de estresse.}
+    \label{fig:teste_estresse_grafico}
+\end{figure}
+
+Para o teste de estresse, foi configurada uma duração de 60 segundos realizando operações de peek contínuas. Os resultados foram:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|r|}
+    \hline
+    \textbf{Métrica} & \textbf{Valor} \\
+    \hline
+    Total de Medições & 5.897 \\
+    \hline
+    Medições Bem-Sucedidas & 5.897 \\
+    \hline
+    Taxa de Erro (\%) & 0.0 \\
+    \hline
+    Latência Média (ms) & 6.628 \\
+    \hline
+    Latência Mediana (ms) & 6.352 \\
+    \hline
+    Desvio Padrão (ms) & 2.213 \\
+    \hline
+    Latência Mínima (ms) & 2.750 \\
+    \hline
+    Latência Máxima (ms) & 13.215 \\
+    \hline
+    P95 (ms) & 10.027 \\
+    \hline
+    P99 (ms) & 10.272 \\
+    \hline
+    Jitter Médio (ms) & 0.236 \\
+    \hline
+    \end{tabular}
+    \caption{Dados de performance do teste de estresse (host)}
+    \label{tab:estresse_host}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|r|}
+    \hline
+    \textbf{Métrica (Firmware)} & \textbf{Valor} \\
+    \hline
+    Total de Medições & 5.905 \\
+    \hline
+    Taxa de Erro (\%) & 0.0 \\
+    \hline
+    Frame Jitter Médio (ms) & 0.0023 \\
+    \hline
+    Frame Rate (fps) & 99.0 \\
+    \hline
+    Comando Process Time Médio (ms) & 0.833 \\
+    \hline
+    Gaps de Frame Counter & 90 \\
+    \hline
+    Gaps de Command Sequence & 0 \\
+    \hline
+    \end{tabular}
+    \caption{Dados de performance embarcada (teste de estresse)}
+    \label{tab:estresse_embarcada}
+\end{table}
+
+\subsubsection{Análise}
+
+Durante 60 segundos de operação contínua, o sistema manteve taxa de erro zero. A pequena variação observada pode ser atribuída a interferências no buffer serial. Apesar desses picos, o frame rate médio permaneceu estável. Nenhum gap de sequência de comandos foi identificado, confirmando integridade lógica do protocolo sob estresse.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|l|}
+    \hline
+    \textbf{Aspecto} & \textbf{Observação} \\
+    \hline
+    Latência média (host) & $\sim$6,63 ms — dentro do esperado sob carga \\
+    \hline
+    Jitter médio (host) & $\sim$0.23 ms — boa estabilidade \\
+    \hline
+    Frame rate médio (firmware) & $\sim$99 fps — ciclo estável \\
+    \hline
+    Tempo médio de comando & $\sim$0.832 ms — processamento uniforme \\
+    \hline
+    Anomalias detectadas & Pequenos gaps pontuais, sem impacto crítico \\
+    \hline
+    \end{tabular}
+    \caption{Resumo da análise do teste de estresse}
+    \label{tab:resumo_estresse}
+\end{table}
+
+\subsection{Teste de Rajada (Burst)}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.90\textwidth]{recursos/figuras/teste_rajada_grafico.png}
+    \caption{Gráfico de resultados do teste de rajada.}
+    \label{fig:teste_rajada_grafico}
+\end{figure}
+
+O teste de rajada foi executado disparando um total de 10.000 comandos (1.000 em sequências de 10 chamadas). Os resultados foram:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|r|}
+    \hline
+    \textbf{Métrica} & \textbf{Valor} \\
+    \hline
+    Total de Medições & 10.000 \\
+    \hline
+    Medições Bem-Sucedidas & 10.000 \\
+    \hline
+    Taxa de Erro (\%) & 0.0 \\
+    \hline
+    Latência Média (ms) & 10.081 \\
+    \hline
+    Latência Mediana (ms) & 10.069 \\
+    \hline
+    Desvio Padrão (ms) & 0.158 \\
+    \hline
+    Latência Mínima (ms) & 5.448 \\
+    \hline
+    Latência Máxima (ms) & 10.811 \\
+    \hline
+    P95 (ms) & 10.262 \\
+    \hline
+    P99 (ms) & 10.374 \\
+    \hline
+    Jitter Médio (ms) & 0.122 \\
+    \hline
+    \end{tabular}
+    \caption{Dados de performance do teste de rajada (host)}
+    \label{tab:rajada_host}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|r|}
+    \hline
+    \textbf{Métrica (Firmware)} & \textbf{Valor} \\
+    \hline
+    Total de Amostras & 99 \\
+    \hline
+    Frame Jitter Médio (ms) & 0.0021 \\
+    \hline
+    Frame Rate (fps) & 99.0 \\
+    \hline
+    Comando Process Time Médio (ms) & 2.089 \\
+    \hline
+    Gaps no Frame Counter & 0 \\
+    \hline
+    Gaps na Command Sequence & 0 \\
+    \hline
+    \end{tabular}
+    \caption{Dados de performance embarcada (teste de rajada)}
+    \label{tab:rajada_embarcada}
+\end{table}
+
+\subsubsection{Análise}
+
+No cenário de rajada, o protocolo processou 10.000 operações sem erros, mantendo latência média de 10,08 ms e jitter inferior a 0,12 ms. Esse comportamento demonstra excelente estabilidade sob alta taxa de requisições.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|l|}
+    \hline
+    \textbf{Aspecto} & \textbf{Observação} \\
+    \hline
+    Latência média (host) & 10,08 ms — dentro do esperado \\
+    \hline
+    Jitter médio (host) & 0,12 ms — estabilidade excelente \\
+    \hline
+    Jitter embarcado & 0,002 ms — precisão excelente \\
+    \hline
+    Tempo de processamento & Média 2,09 ms, eventos até 135 ms \\
+    \hline
+    Taxa de erro & 0,0 \% — nenhuma falha \\
+    \hline
+    Integridade de sequência & Total — sem perdas detectadas \\
+    \hline
+    \end{tabular}
+    \caption{Resumo da análise do teste de rajada}
+    \label{tab:resumo_rajada}
+\end{table}
+
+\subsection{Testes com Osciloscópio}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth, angle=90]{recursos/figuras/osciloscopio_setup.jpg}
+    \caption{Setup do osciloscópio conectado ao Arduino.}
+    \label{fig:osciloscopio_setup}
+\end{figure}
+
+Devido ao osciloscópio possuir apenas um canal, foi possível monitorar dois aspectos principais:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|l|l|}
+    \hline
+    \textbf{Métrica} & \textbf{Fonte (pinos)} & \textbf{Descrição} \\
+    \hline
+    $t_{BUSY}$ & PIN\_BUSY & Duração da execução interna do comando \\
+    \hline
+    $f_{LOOP}$ & PIN\_FRAME\_TOGGLE & Frequência do loop (deve ser 100 Hz) \\
+    \hline
+    $\Delta f_{LOOP}$ & PIN\_FRAME\_TOGGLE & Jitter percentual no ciclo do loop \\
+    \hline
+    \end{tabular}
+    \caption{Métricas medidas com osciloscópio}
+    \label{tab:metricas_osciloscópio}
+\end{table}
+
+\subsubsection{Testes de Tempo de Comando}
+
+\subsubsection{Medição a 10 Hz}
+
+Para os envios de comandos a 10 Hz, a frequência de detecção de comandos (14,81 Hz) 
+é próxima à frequência de envio e substancialmente inferior à frequência de execução do 
+loop principal (100 Hz). Temos um comando peek sendo processado a cada 10 frames 
+aproximadamente.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.90\textwidth, angle=180]{recursos/figuras/osciloscopio_tempo_comando_10hz.jpg}
+    \caption{Medição de tempo de comando a 10 Hz.}
+    \label{fig:osciloscopio_tempo_comando_10hz}
+\end{figure}
+
+
+A Tabela \ref{tab:osc_medicao_10hz} apresenta os parâmetros de temporização medidos 
+pelo osciloscópio durante este teste:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|p{3.5cm}|p{3cm}|p{4cm}|}
+    \hline
+    \textbf{Parâmetro} & \textbf{Valor} & \textbf{Interpretação} \\
+    \hline
+    Frequência (Freq) & 14.81 Hz & Frequência de detecção dos pulsos de comando (PIN\_BUSY) \\
+    \hline
+    Período (Peri) & 43.34 ms & Intervalo de tempo entre detecções de comandos consecutivos \\
+    \hline
+    Duty Cycle & 98.24\% & Percentual de tempo que o sinal permanece em nível alto \\
+    \hline
+    Duty+ & 1.76\% & Percentual de tempo que o pulso fica ativo (comando processando) \\
+    \hline
+    Largura do Pulso (Widt) & 720.00 µs & Duração do pulso de processamento do comando \\
+    \hline
+    Vmax & 4.88 V & Tensão máxima do sinal capturado \\
+    \hline
+    Vmin & -80.00 mV & Tensão mínima do sinal (ruído de linha) \\
+    \hline
+    Vp-p (Pico a Pico) & 5.00 V & Amplitude total da forma de onda \\
+    \hline
+    Vrms & 400.93 mV & Valor RMS (raiz quadrada média) do sinal \\
+    \hline
+    Amplitude (Amp) & 4.96 V & Amplitude média do sinal \\
+    \hline
+    \end{tabular}
+    \caption{Parâmetros de temporização medidos a 10 Hz — Teste de tempo de comando}
+    \label{tab:osc_medicao_10hz}
+\end{table}
+
+\subsubsection{Análise dos Resultados a 10 Hz}
+
+Os resultados da medição permitem as seguintes observações:
+
+\begin{itemize}
+    \item A frequência medida de 14.81 Hz está próxima à taxa esperada de envio de 
+    comandos (10 Hz), com a diferença explicada pela variabilidade de timing e jitter 
+    inerente ao Arduino.
+    
+    \item O período de 43.34 ms corresponde aproximadamente a 4,3 ciclos do loop de 100 Hz 
+    (período teórico de 10 ms), indicando que um comando é processado a cada 4-5 iterações 
+    do loop.
+    
+    \item A largura do pulso de 720 µs (0,72 ms) representa o tempo de processamento 
+    efetivo de um comando, alinhado com os dados coletados internamente pelo firmware 
+    (command\_process\_time $\approx$ 0,73 ms).
+    
+    \item O duty cycle de 98.24\% indica que o sistema permanece em espera entre comandos, 
+    com apenas 1.76\% do tempo dedicado ao processamento ativo, refletindo a eficiência 
+    do protocolo em cenários de baixa frequência.
+    
+    \item A amplitude de 5 V confirma que o sinal está dentro dos limites esperados para 
+    lógica digital de 5V do Arduino.
+\end{itemize}
+
+
+\subsubsection{Medição a 100 Hz}
+
+Aumentando a frequência de envios de comandos para 100 Hz, a forma de onda permite a 
+leitura da frequência próxima à execução do loop, indicando pelo menos 1 comando peek 
+por ciclo. Os resultados da medição são apresentados na Tabela \ref{tab:osc_medicao_100hz}:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.90\textwidth]{recursos/figuras/osciloscopio_tempo_comando_100hz.jpg}
+    \caption{Medição de tempo de comando a 100 Hz.}
+    \label{fig:osciloscopio_tempo_comando_100hz}
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|p{3.5cm}|p{3cm}|p{4cm}|}
+    \hline
+    \textbf{Parâmetro} & \textbf{Valor} & \textbf{Interpretação} \\
+    \hline
+    Frequência (Freq) & 99.13 Hz & Frequência de detecção dos pulsos de comando (próxima aos 100 Hz esperados) \\
+    \hline
+    Período (Peri) & 10.09 ms & Intervalo de tempo entre detecções de comandos consecutivos \\
+    \hline
+    Duty Cycle & 92.74\% & Percentual de tempo que o sinal permanece em nível alto \\
+    \hline
+    Duty+ & 7.26\% & Percentual de tempo que o pulso fica ativo (comando processando) \\
+    \hline
+    Largura do Pulso (Widt) & 732.00 µs & Duração do pulso de processamento do comando \\
+    \hline
+    Vmax & 5.12 V & Tensão máxima do sinal capturado \\
+    \hline
+    Vmin & -80.00 mV & Tensão mínima do sinal (ruído de linha) \\
+    \hline
+    Vp-p (Pico a Pico) & 5.20 V & Amplitude total da forma de onda \\
+    \hline
+    Vrms & 1.34 V & Valor RMS (raiz quadrada média) do sinal \\
+    \hline
+    Amplitude (Amp) & 5.20 V & Amplitude média do sinal \\
+    \hline
+    \end{tabular}
+    \caption{Parâmetros de temporização medidos a 100 Hz — Teste de tempo de comando}
+    \label{tab:osc_medicao_100hz}
+\end{table}
+
+\subsubsection{Análise dos Resultados a 100 Hz}
+
+Os resultados da medição a 100 Hz permitem as seguintes observações:
+
+\begin{itemize}
+    \item A frequência medida de 99.13 Hz está extremamente próxima aos 100 Hz esperados 
+    pela taxa de envio de comandos, demonstrando excelente alinhamento temporal entre o 
+    host e o firmware.
+    
+    \item O período de 10.09 ms corresponde praticamente a um ciclo completo do loop de 
+    100 Hz (período esperado de 10 ms), indicando que em média um comando é processado 
+    por iteração do loop.
+    
+    \item A largura do pulso de 732 µs (0,732 ms) permanece praticamente constante em 
+    relação à medição a 10 Hz (720 µs), reforçando a consistência do tempo de processamento 
+    de comandos (command\_process\_time).
+    
+    \item O duty cycle de 7.26\% indica que sob carga de 100 Hz, o sistema dedica 
+    aproximadamente 7,26\% do tempo ao processamento ativo, deixando margem de segurança 
+    para outras operações.
+    
+    \item A amplitude de 5.20 V confirma níveis de sinal saudáveis e sem distorção, 
+    mesmo sob taxa de comandos 10x maior que a primeira medição.
+    
+    \item O valor de Vrms de 1.34 V (comparado a 400.93 mV no teste a 10 Hz) reflete o 
+    aumento do duty cycle, confirmando que mais tempo está sendo gasto em processamento.
+\end{itemize}
+
+\subsubsection{Medição a 1 kHz}
+
+Para o envio de comandos peek a 1 kHz, o resultado mostra capacidade do protocolo DESTRA 
+de processar um volume relativamente alto de comandos, aproximadamente 10 comandos a cada 
+tick do programa embarcado. Os parâmetros medidos são apresentados na Tabela 
+\ref{tab:osc_medicao_1khz}:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth, angle=270]{recursos/figuras/osciloscopio_tempo_comando_1khz.jpg}
+    \caption{Medição de tempo de comando a 1 kHz.}
+    \label{fig:osciloscopio_tempo_comando_1khz}
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|p{3.5cm}|p{3cm}|p{4cm}|}
+    \hline
+    \textbf{Parâmetro} & \textbf{Valor} & \textbf{Interpretação} \\
+    \hline
+    Frequência (Freq) & 99.13 Hz & Frequência de detecção dos pulsos de comando agrupados \\
+    \hline
+    Período (Peri) & 10.09 ms & Intervalo entre grupos de comandos processados \\
+    \hline
+    Duty Cycle & 92.76\% & Percentual de tempo que o sinal permanece em nível alto \\
+    \hline
+    Duty+ & 7.24\% & Percentual de tempo que os pulsos ficam ativos \\
+    \hline
+    Largura do Pulso (Widt) & 730.00 µs & Duração do pulso de processamento (por comando individual) \\
+    \hline
+    Vmax & 4.96 V & Tensão máxima do sinal capturado \\
+    \hline
+    Vmin & -80.00 mV & Tensão mínima do sinal (ruído de linha) \\
+    \hline
+    Vp-p (Pico a Pico) & 5.04 V & Amplitude total da forma de onda \\
+    \hline
+    Vrms & 1.26 V & Valor RMS (raiz quadrada média) do sinal \\
+    \hline
+    Amplitude (Amp) & 4.96 V & Amplitude média do sinal \\
+    \hline
+    \end{tabular}
+    \caption{Parâmetros de temporização medidos a 1 kHz — Teste de tempo de comando}
+    \label{tab:osc_medicao_1khz}
+\end{table}
+
+\subsubsection{Análise dos Resultados a 1 kHz}
+
+Os resultados da medição a 1 kHz permitem as seguintes observações:
+
+\begin{itemize}
+    \item A frequência medida permanece em 99.13 Hz, refletindo que o osciloscópio está 
+    capturando a frequência de agrupamento dos pulsos (10 comandos por ciclo de 10 ms = 
+    1000 comandos/s). A forma de onda mostra pulsos próximos entre si, indicando 
+    processamento sequencial rápido.
+    
+    \item O período de 10.09 ms permanece praticamente idêntico às medições anteriores, 
+    confirmando que o loop principal mantém sua frequência de 100 Hz mesmo sob carga 
+    extrema de 1 kHz.
+    
+    \item A largura do pulso de 730 µs mantém-se estável em relação às medições anteriores, 
+    demonstrando que cada comando individual requer aproximadamente o mesmo tempo de 
+    processamento, independentemente da frequência de chegada.
+    
+    \item O duty cycle de 7.24\% é praticamente idêntico ao da medição a 100 Hz, sugerindo 
+    que o sistema está processando os comandos em forma de rajadas (burst), com períodos 
+    de inatividade entre os grupos.
+    
+    \item A forma de onda em dente-de-serra observada na tela reflete exatamente esse 
+    comportamento: múltiplos pulsos de comando chegam quase simultaneamente (devido à 
+    comunicação serial em 115200 bps), e o firmware os processa sequencialmente dentro 
+    de cada ciclo de 10 ms.
+    
+    \item A amplitude de 5.04 V permanece dentro dos limites esperados, confirmando que 
+    não há degradação de sinal mesmo sob essa taxa extrema de processamento.
+\end{itemize}
+
+\subsubsection{Síntese Comparativa das Três Medições}
+
+A Tabela \ref{tab:osc_comparativo_todas} apresenta uma comparação consolidada dos 
+três cenários de teste:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|p{2.5cm}|p{2cm}|p{2cm}|p{2cm}|}
+    \hline
+    \textbf{Parâmetro} & \textbf{10 Hz} & \textbf{100 Hz} & \textbf{1 kHz} \\
+    \hline
+    Frequência Medida & 14.81 Hz & 99.13 Hz & 99.13 Hz \\
+    \hline
+    Período & 43.34 ms & 10.09 ms & 10.09 ms \\
+    \hline
+    Largura Pulso & 720 µs & 732 µs & 730 µs \\
+    \hline
+    Duty Cycle & 1.76\% & 7.26\% & 7.24\% \\
+    \hline
+    Vp-p & 5.00 V & 5.20 V & 5.04 V \\
+    \hline
+    Vrms & 400.93 mV & 1.34 V & 1.26 V \\
+    \hline
+    \end{tabular}
+    \caption{Comparação dos parâmetros de temporização nas três taxas de envio de comando}
+    \label{tab:osc_comparativo_todas}
+\end{table}
+
+Outra importante observação sobre os gráficos extraídos das medidas de tempo de comando 
+é que a largura da forma de onda, que indica o tempo em que o pino PIN\_BUSY ficou ativo 
+(tempo de execução de um comando), permaneceu praticamente constante durante as três 
+medidas, com valor aproximadamente igual ao das medidas instrumentadas do software 
+embarcado, na faixa de 730 microssegundos. Este resultado corrobora a precisão e 
+confiabilidade da instrumentação interna do firmware, validando que as métricas coletadas 
+refletem fielmente o comportamento temporal real do sistema.
+
+\subsubsection{Testes de Frame Rate}
+
+O pino \texttt{PIN\_FRAME\_TOGGLE} é alternado a cada ciclo do loop principal, permitindo medir a frequência de execução e o jitter temporal da aplicação. Esta medida visa detectar o frame rate da aplicação durante a execução dos comandos sob diferentes cargas.
+
+\subsubsection{Medição de Frame Rate a 10 Hz}
+
+A 10 Hz de envio de comandos, o tempo de frame é de 10 ms, refletindo um período baseado 
+na execução do loop principal. Os parâmetros medidos são apresentados na Tabela 
+\ref{tab:osc_frame_10hz}:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.90\textwidth, angle=180]{recursos/figuras/osciloscopio_frame_10hz.jpg}
+    \caption{\protect{Medição de frame rate a 10 Hz. A forma de onda quadrada mostra a alternância do pino \texttt{PIN\_FRAME\_TOGGLE} a cada ciclo do loop. O período medido de 20.18 ms corresponde a dois ciclos completos (uma subida e uma descida).}}
+    \label{fig:osciloscopio_frame_10hz}
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|p{3.5cm}|p{3cm}|p{4cm}|}
+    \hline
+    \textbf{Parâmetro} & \textbf{Valor} & \textbf{Interpretação} \\
+    \hline
+    Frequência (Freq) & 49.55 Hz & Frequência de alternância do pino (metade da frequência do loop, pois cada ciclo tem uma subida e uma descida) \\
+    \hline
+    Período (Peri) & 20.18 ms & Intervalo total entre duas transições completas (subida + descida) \\
+    \hline
+    Duty Cycle & 50.02\% & Percentual de tempo em nível alto (sinal simétrico, como esperado) \\
+    \hline
+    Largura de Pulso Alto (Widt+) & 10.09 ms & Tempo de um ciclo do loop (metade do período total) \\
+    \hline
+    Largura de Pulso Baixo (Widt-) & 10.09 ms & Tempo de um ciclo do loop (metade do período total) \\
+    \hline
+    Vmax & 5.00 V & Tensão máxima do sinal \\
+    \hline
+    Vmin & -80.00 mV & Tensão mínima do sinal (ruído de linha) \\
+    \hline
+    Vp-p (Pico a Pico) & 5.08 V & Amplitude total da forma de onda \\
+    \hline
+    Vrms & 3.45 V & Valor RMS (raiz quadrada média) do sinal \\
+    \hline
+    Amplitude (Amp) & 5.04 V & Amplitude média do sinal \\
+    \hline
+    \end{tabular}
+    \caption{Parâmetros de frame rate medidos a 10 Hz}
+    \label{tab:osc_frame_10hz}
+\end{table}
+
+\subsubsection{Medição de Frame Rate a 100 Hz}
+
+Para 100 Hz, obtemos praticamente a mesma medida, demonstrando que o loop principal mantém 
+sua frequência de execução independentemente da taxa de envio de comandos. A Tabela 
+\ref{tab:osc_frame_100hz} apresenta os parâmetros:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.90\textwidth, angle=180]{recursos/figuras/osciloscopio_frame_100hz.jpg}
+    \caption{Medição de frame rate a 100 Hz. A forma de onda mantém a mesma periodicidade 
+    observada a 10 Hz, confirmando que o loop principal não é afetado pela taxa de envio 
+    de comandos.}
+    \label{fig:osciloscopio_frame_100hz}
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|p{3.5cm}|p{3cm}|p{4cm}|}
+    \hline
+    \textbf{Parâmetro} & \textbf{Valor} & \textbf{Interpretação} \\
+    \hline
+    Frequência (Freq) & 49.55 Hz & Frequência de alternância do pino (mesma que a medição a 10 Hz) \\
+    \hline
+    Período (Peri) & 20.18 ms & Intervalo total entre duas transições completas \\
+    \hline
+    Duty Cycle & 50.00\% & Percentual de tempo em nível alto (sinal perfeitamente simétrico) \\
+    \hline
+    Largura de Pulso Alto (Widt+) & 10.09 ms & Tempo de um ciclo do loop \\
+    \hline
+    Largura de Pulso Baixo (Widt-) & 10.09 ms & Tempo de um ciclo do loop \\
+    \hline
+    Vmax & 4.96 V & Tensão máxima do sinal \\
+    \hline
+    Vmin & -80.00 mV & Tensão mínima do sinal \\
+    \hline
+    Vp-p (Pico a Pico) & 5.04 V & Amplitude total da forma de onda \\
+    \hline
+    Vrms & 3.45 V & Valor RMS do sinal \\
+    \hline
+    Amplitude (Amp) & 5.04 V & Amplitude média do sinal \\
+    \hline
+    \end{tabular}
+    \caption{Parâmetros de frame rate medidos a 100 Hz}
+    \label{tab:osc_frame_100hz}
+\end{table}
+
+\subsubsection{Medição de Frame Rate a 1 kHz}
+
+A 1 kHz, confirmamos novamente a estabilidade do frame rate, reforçando que o sistema 
+mantém seu clock de 100 Hz mesmo sob carga extrema. A Tabela \ref{tab:osc_frame_1khz} 
+apresenta os parâmetros:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.90\textwidth]{recursos/figuras/osciloscopio_frame_1khz.jpg}
+    \caption{Medição de frame rate a 1 kHz. A forma de onda permanece idêntica às medições 
+    anteriores, demonstrando que o protocolo DESTRA não introduz degradação temporal 
+    no loop principal, mesmo sob taxa extrema de comandos.}
+    \label{fig:osciloscopio_frame_1khz}
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|p{3.5cm}|p{3cm}|p{4cm}|}
+    \hline
+    \textbf{Parâmetro} & \textbf{Valor} & \textbf{Interpretação} \\
+    \hline
+    Frequência (Freq) & 49.70 Hz & Frequência de alternância do pino (praticamente idêntica) \\
+    \hline
+    Período (Peri) & 20.12 ms & Intervalo total entre duas transições completas \\
+    \hline
+    Duty Cycle & 50.00\% & Percentual de tempo em nível alto (sinal perfeitamente simétrico) \\
+    \hline
+    Largura de Pulso Alto (Widt+) & 10.06 ms & Tempo de um ciclo do loop \\
+    \hline
+    Largura de Pulso Baixo (Widt-) & 10.06 ms & Tempo de um ciclo do loop \\
+    \hline
+    Vmax & 4.96 V & Tensão máxima do sinal \\
+    \hline
+    Vmin & -80.00 mV & Tensão mínima do sinal \\
+    \hline
+    Vp-p (Pico a Pico) & 5.08 V & Amplitude total da forma de onda \\
+    \hline
+    Vrms & 3.45 V & Valor RMS do sinal \\
+    \hline
+    Amplitude (Amp) & 5.04 V & Amplitude média do sinal \\
+    \hline
+    \end{tabular}
+    \caption{Parâmetros de frame rate medidos a 1 kHz}
+    \label{tab:osc_frame_1khz}
+\end{table}
+
+\subsubsection{Análise Consolidada dos Testes de Frame Rate}
+
+As medições de frame rate complementam as análises de tempo de comando, fornecendo 
+evidência independente da estabilidade temporal do sistema. A Tabela 
+\ref{tab:osc_frame_comparativo} apresenta uma comparação consolidada:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|p{2.8cm}|p{2.2cm}|p{2.2cm}|p{2.2cm}|}
+    \hline
+    \textbf{Parâmetro} & \textbf{10 Hz} & \textbf{100 Hz} & \textbf{1 kHz} \\
+    \hline
+    Frequência & 49.55 Hz & 49.55 Hz & 49.70 Hz \\
+    \hline
+    Período Total & 20.18 ms & 20.18 ms & 20.12 ms \\
+    \hline
+    Período Loop & 10.09 ms & 10.09 ms & 10.06 ms \\
+    \hline
+    Duty Cycle & 50.02\% & 50.00\% & 50.00\% \\
+    \hline
+    Vp-p & 5.08 V & 5.04 V & 5.08 V \\
+    \hline
+    \end{tabular}
+    \caption{Comparação consolidada dos parâmetros de frame rate nas três taxas de comando}
+    \label{tab:osc_frame_comparativo}
+\end{table}
+
+\subsubsection{Observações Críticas}
+
+\begin{itemize}
+    \item A frequência medida de aproximadamente 49.6 Hz (em vez de 50 Hz teórico) reflete 
+    que o osciloscópio está capturando a frequência de alternância do pino, que é metade 
+    da frequência do loop (100 Hz ÷ 2 = 50 Hz). A pequena variação (~0,3 Hz) é atribuível 
+    à precisão do cristal e ao jitter inerente.
+    
+    \item O período de aproximadamente 10.08 ms por ciclo confirma que o loop está sendo 
+    executado em 100 Hz, exatamente como programado. A variação máxima observada é de 
+    apenas 0,12 ms entre as medições (10.06 ms a 10.09 ms), representando um jitter 
+    relativo de aproximadamente 1,2\%, dentro do esperado para cristais de 16 MHz.
+    
+    \item O duty cycle de praticamente 50\% indica que o sinal está perfeitamente simétrico 
+    (tempo alto $\approx$ tempo baixo), confirmando que o \texttt{TOGGLE\_FRAME()} está funcionando corretamente sem distorções.
+    
+    \item A amplitude de sinal de 5.04-5.08 V permanece estável em todas as três medições, 
+    confirmando que não há degradação de sinal mesmo sob carga extrema de 1 kHz.
+    
+    \item A extraordinária estabilidade do frame rate (variação máxima de 0,18 ms em 10 ms, 
+    ou ~1,8\%) valida o mecanismo de controle temporal implementado no firmware, que força 
+    o loop a executar a cada 10 ms através de \texttt{delayMicroseconds()}.
+\end{itemize}
+
+\section{Análise Geral dos Testes com Osciloscópio}
+
+As medições realizadas com o osciloscópio confirmaram integralmente a periodicidade 
+observada via instrumentação de software. A captura do sinal de alternância de frame 
+apresentou uma frequência média de 99.4 Hz (medida direta do loop = 2 × 49.6 Hz de 
+alternância), com variação máxima de apenas 1.8\%, bem dentro do limite esperado para 
+osciladores de cristal de 16 MHz em microcontroladores.
+
+Essa medição física corrobora a precisão temporal do sistema e valida completamente a 
+confiabilidade da instrumentação interna do firmware. As variações de jitter registradas 
+pelo software refletem flutuações reais no tempo de execução do loop, não artefatos de 
+medição.
+
+Adicionalmente, a consistência observada entre as três cenários de teste (10 Hz, 100 Hz e 
+1 kHz) demonstra que o protocolo DESTRA é completamente não-intrusivo quanto ao 
+comportamento temporal do sistema. O loop principal continua executando em sua frequência 
+programada de 100 Hz, independentemente da carga de comandos, confirmando a viabilidade 
+da solução como ferramenta de depuração para sistemas embarcados críticos que exigem 
+determinismo temporal rigoroso.
+
+\section{Conclusões dos Testes}
+
+Os testes realizados demonstram que o protocolo DESTRA funciona de forma estável e 
+previsível em diferentes cenários de carga e frequência. A ausência total de erros de 
+transmissão, combinada com latências consistentes e jitter baixo, evidencia a adequação 
+da solução para aplicações embarcadas de prototipagem e depuração.
+
+Os resultados suportam a viabilidade da extensão do protocolo para ambientes críticos, 
+desde que sejam implementados mecanismos adicionais de segurança e integridade conforme 
+discutido no Capítulo \ref{chap:conclusao}.

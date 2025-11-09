@@ -1,0 +1,142 @@
+% ------------------------------------------------------------------------
+% Arquivo principal do TCC - Sandro Fadiga
+% Template baseado no abnTeX2
+% ------------------------------------------------------------------------
+\documentclass[
+    a4paper,
+    12pt,                 % Tamanho da fonte
+    oneside, 
+    openright,
+    english,              % Idioma adicional
+    brazilian             % Idioma principal
+]{abntex2}
+% ------------------------------------------------------------------------
+% Pacotes básicos
+% ------------------------------------------------------------------------
+\usepackage{lmodern}      % Usa a fonte Latin Modern
+\usepackage[T1]{fontenc}  % Codificação da fonte
+\usepackage[utf8]{inputenc} % Codificação do arquivo
+\usepackage{lastpage}     % Contador de páginas
+\usepackage{indentfirst}  % Indenta o primeiro parágrafo de cada seção
+\usepackage{color}        % Controle das cores
+\usepackage{graphicx}     % Inclusão de figuras
+\usepackage{microtype}    % Melhora a justificação do texto
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{float}        % Controle de posicionamento de figuras/tabelas
+\usepackage{enumitem}     % Personalização de listas
+\usepackage{booktabs}     % Tabelas mais profissionais
+\usepackage{pdfpages}     % Inserir PDFs
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{longtable}    % Tabelas que quebram página
+\usepackage{listings}     % Código fonte formatado
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{epstopdf}
+\usepackage{setspace}
+\usepackage{textcomp}
+\usepackage{array}
+\usepackage{multirow}
+% \usepackage{titlesec}     % Para controlar a formatação de títulos
+\usepackage{listings}
+
+% Pacotes para diagramas UML com TikZ
+\usepackage{tikz}
+\usepackage{pgf-umlcd}
+\usetikzlibrary{positioning, shapes, arrows, calc, decorations.pathmorphing}
+
+% Configurar lstlisting para português
+\renewcommand\lstlistingname{Listagem}
+\renewcommand\lstlistlistingname{Lista de Listagens}
+
+% ------------------------------------------------------------------------
+% CORREÇÃO: Força todos os títulos usarem a mesma fonte do texto
+% ------------------------------------------------------------------------
+\renewcommand{\ABNTEXchapterfont}{\rmfamily} % Remove itálico e negrito excessivo
+\renewcommand{\ABNTEXchapterfontsize}{\normalsize\bfseries} % Tamanho normal com negrito
+
+% ------------------------------------------------------------------------
+% Configuração de hiperlinks
+% ------------------------------------------------------------------------
+\hypersetup{
+    pdftitle={TCC - Sandro Fadiga},
+    pdfauthor={Sandro Fadiga},
+    pdfsubject={Protocolo de Peek/Poke para apoio à certificação de software embarcado},
+    pdfcreator={LaTeX com abnTeX2},
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=blue,
+    urlcolor=blue
+}
+% ------------------------------------------------------------------------
+% Informações de capa e folha de rosto
+% ------------------------------------------------------------------------
+\titulo{Depuração de Sistemas em Tempo Real:\\ Uma Abordagem de
+Instrumentação de Código\\ para Testes de Sistemas Críticos.}
+\autor{Sandro Fadiga}
+\local{São Carlos}
+\data{2025}
+\instituicao{%
+  Escola de Engenharia de São Carlos\\
+  Universidade de São Paulo – USP}
+\tipotrabalho{Trabalho de Conclusão de Curso (TCC)}
+
+\preambulo{Monografia apresentada ao Curso de
+Especialização em Sistemas Aeronáuticos da
+Escola de Engenharia de São Carlos da
+Universidade de São Paulo, como parte dos
+requisitos para obtenção do título de
+Especialista em Sistemas Aeronáuticos.
+\\[0.5cm]
+Orientador: Prof. Dr. Glauco Augusto de Paula Caurin
+}
+
+
+% ------------------------------------------------------------------------
+% Início do documento
+% ------------------------------------------------------------------------
+\begin{document}
+
+% Capa e folha de rosto
+\imprimircapa
+\imprimirfolhaderosto*
+
+% ------------------------------------------------------------------------
+% Elementos pré-textuais
+% ------------------------------------------------------------------------
+\input{0_ficha}
+\input{1_folha_aprovacao}
+\input{2_dedicatoria}
+\input{3_agradecimentos}
+\input{4_epigrafe}
+\input{5_resumo}
+\input{6_abstract}
+\newpage
+\lstlistoflistings
+\newpage
+\listoffigures*
+\newpage
+\listoftables*
+\newpage
+\tableofcontents*
+
+% ------------------------------------------------------------------------
+% Elementos textuais
+% ------------------------------------------------------------------------
+\textual
+\input{cap1_introducao}      % Capítulo 1
+\input{cap2_fundamentacao}   % Capítulo 2 
+\input{cap3_desenvolvimento} % Capítulo 3
+\input{cap4_testes}          % Capítulo 4
+\input{cap5_conclusao}       % Capítulo 5
+\input{cap6_referencias}     % Referências bibliográficas
+% ------------------------------------------------------------------------
+% Elementos pós-textuais
+% ------------------------------------------------------------------------
+\apendices
+\input{apendice_a_codigo_arduino}
+\input{apendice_b_ferramenta_host}
+\input{apendice_c_protocolo_instrumentado}
+\input{apendice_d_testes_performance}
+\input{apendice_e_diagrama_classes}
+\end{document}
