@@ -1,0 +1,149 @@
+% ============================================================================
+% APÊNDICE E - DIAGRAMA DE CLASSES DESTRA UI
+% ============================================================================
+\chapter{Diagrama de Classes da Aplicação DESTRA UI}
+
+Este apêndice apresenta o diagrama de classes UML da aplicação DESTRA UI, mostrando a arquitetura do sistema e os relacionamentos entre os principais componentes.
+
+\section{Visão Geral da Arquitetura}
+
+A aplicação DESTRA UI foi desenvolvida seguindo uma arquitetura em camadas, separando claramente as responsabilidades:
+
+\begin{itemize}
+    \item \textbf{Camada de Interface}: Responsável pela interação com o usuário (DestraGUI)
+    \item \textbf{Camada de Protocolo}: Gerencia a comunicação serial com o Arduino (DestraProtocol)
+    \item \textbf{Camada de Análise}: Processa arquivos ELF e extrai informações de variáveis (ElfDataDictionary)
+    \item \textbf{Camada de Dados}: Define estruturas para armazenar informações (VariableInfo, PerformanceData)
+\end{itemize}
+
+\section{Diagrama de Classes}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[scale=1.0, transform shape]
+
+% DestraGUI (Interface Principal)
+\begin{class}[text width=4cm]{DestraGUI}{3,6}
+\attribute{- logger\_manager: DestraLogger}
+\attribute{- elf\_data: ElfDataDictionary}
+\attribute{- \_destra: DestraProtocol}
+\attribute{- all\_variables: List[VariableInfo]}
+\attribute{- auto\_peek\_timer: QTimer}
+\attribute{- \_is\_connected: bool}
+\operation{+ connect\_to\_arduino(): void}
+\operation{+ browse\_file(): void}
+\operation{+ peek\_values(): void}
+\operation{+ poke\_values(): void}
+\operation{+ start\_stop\_auto\_peek(): void}
+\end{class}
+
+% DestraProtocol (Protocolo de Comunicação)
+\begin{class}[text width=4cm]{DestraProtocol}{8,6}
+\attribute{- MAGIC\_CA: bytes}
+\attribute{- MAGIC\_FE: bytes}
+\attribute{- PEEK\_CMD: bytes}
+\attribute{- POKE\_CMD: bytes}
+\attribute{- ser: serial.Serial}
+\attribute{- logger: Logger}
+\operation{+ connect(): bool}
+\operation{+ peek(address, size): bytes}
+\operation{+ poke(address, value): bool}
+\operation{+ performance(): List}
+\end{class}
+
+% ElfDataDictionary (Análise de Arquivos ELF)
+\begin{class}[text width=4.5cm]{ElfDataDictionary}{-3,6}
+\attribute{- elf\_file: ELFFile}
+\attribute{- dwarf\_info: DWARFInfo}
+\attribute{- variables: Dict}
+\attribute{- logger: Logger}
+\operation{+ load\_elf\_file(path): bool}
+\operation{+ get\_variables(): List}
+\operation{+ search\_variables(pattern): List}
+\end{class}
+
+% VariableInfo (Informações de Variável)
+\begin{class}[text width=3cm]{VariableInfo}{-2,-3}
+\attribute{+ name: str}
+\attribute{+ address: int}
+\attribute{+ size: int}
+\attribute{+ base\_type: str}
+\attribute{+ is\_signed: bool}
+\operation{+ \_\_str\_\_(): str}
+\end{class}
+
+% Relacionamentos
+\draw[umlcd style dashed line] (DestraGUI) -- node[above, sloped, black]{usa} (DestraProtocol);
+\draw[umlcd style dashed line] (DestraGUI) -- node[left, black]{usa} (ElfDataDictionary);
+\draw[umlcd style dashed line] (ElfDataDictionary) -- node[above, sloped, black]{cria} (VariableInfo);
+
+\end{tikzpicture}
+\caption{Diagrama de Classes da Aplicação DESTRA UI}
+\label{fig:diagrama_classes_destra}
+\end{figure}
+
+\section{Descrição das Classes}
+
+\subsection{DestraGUI}
+Classe principal da interface gráfica, herda de \texttt{QMainWindow}. Responsável por:
+\begin{itemize}
+    \item Gerenciar a interface do usuário com PySide6/Qt
+    \item Coordenar as operações entre protocolo e análise ELF
+    \item Implementar funcionalidades de auto-peek
+    \item Gerenciar tabelas de variáveis disponíveis e selecionadas
+\end{itemize}
+
+\subsection{DestraProtocol}
+Implementa o protocolo de comunicação serial com o Arduino:
+\begin{itemize}
+    \item Define comandos PEEK, POKE e PERFORMANCE
+    \item Gerencia conexão serial e detecção automática de portas
+    \item Processa respostas do protocolo com verificação de integridade
+    \item Decodifica tipos de dados recebidos
+\end{itemize}
+
+\subsection{ElfDataDictionary}
+Analisador de arquivos ELF com informações DWARF:
+\begin{itemize}
+    \item Extrai informações de variáveis (nome, endereço, tipo, tamanho)
+    \item Processa estruturas, arrays e tipos básicos
+    \item Fornece funcionalidades de busca e filtragem
+    \item Gera estatísticas do arquivo analisado
+\end{itemize}
+
+\subsection{VariableInfo}
+Estrutura de dados (dataclass) que armazena informações de uma variável:
+\begin{itemize}
+    \item Nome da variável
+    \item Endereço de memória
+    \item Tamanho em bytes
+    \item Tipo base (uint8, uint16, uint32, etc.)
+    \item Informações sobre sinalização e ponteiros
+\end{itemize}
+
+\subsection{DecodedTypes}
+Classe utilitária para decodificação de tipos de dados:
+\begin{itemize}
+    \item Mapeia tipos de dados para formatos struct
+    \item Fornece informações de tamanho por tipo
+    \item Lista tipos suportados pelo sistema
+\end{itemize}
+
+\section{Padrões de Design Utilizados}
+
+\subsection{Singleton}
+A classe \texttt{DestraLogger} implementa o padrão Singleton para garantir uma instância única de configuração de logging em toda a aplicação.
+
+\subsection{Model-View-Controller (MVC)}
+A arquitetura segue parcialmente o padrão MVC:
+\begin{itemize}
+    \item \textbf{Model}: \texttt{ElfDataDictionary}, \texttt{VariableInfo}, \texttt{PerformanceData}
+    \item \textbf{View}: \texttt{DestraGUI} e componentes Qt (QTableWidget, QComboBox, etc.)
+    \item \textbf{Controller}: Métodos da \texttt{DestraGUI} que coordenam Model e View
+\end{itemize}
+
+\subsection{Data Transfer Object (DTO)}
+As classes \texttt{VariableInfo} e \texttt{PerformanceData} funcionam como DTOs, transportando dados estruturados entre diferentes camadas da aplicação.
+
+\subsection{Facade}
+A classe \texttt{DestraProtocol} atua como uma facade, simplificando o acesso ao protocolo de comunicação serial complexo.
