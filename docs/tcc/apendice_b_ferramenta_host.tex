@@ -969,16 +969,16 @@ class ElfDataDictionary:
 
             dwarf_info = elffile.get_dwarf_info()
 
-            # Analisar todas as unidades de compilação
+            # Analisar todas as unidades de compilacao
             for cu in dwarf_info.iter_CUs():
                 self._parse_compilation_unit(cu)
 
     def _parse_compilation_unit(self, cu) -> None:
-        """Analisar uma única unidade de compilação para variaveis."""
+        """Analisar uma unica unidade de compilacao para variaveis."""
         # Construir um cache de offsets DIE para informacoes de tipo analisadas
         type_cache = {}
 
-        # Primeira passada: analisar todas as definições de tipo
+        # Primeira passada: analisar todas as definicoes de tipo
         for die in cu.iter_DIEs():
             if die.tag in [
                 "DW_TAG_base_type",
