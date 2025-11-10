@@ -129,6 +129,7 @@ struct PerfLog
 };
 PerfLog perfBuffer[PERF_BUFFER_SIZE];
 uint8_t perfIndex = 0;
+
 // ============================================================================
 // FIM - DEFINICOES E VARIAVEIS PARA ANALISE - INSTRUMENTACAO PROTOCOLO
 // ============================================================================
@@ -213,14 +214,13 @@ void destraHandler() {
       // Pacote PEEK/POKE começa com 0xCAFE
       case WAIT_START_HIGH:
         if (inByte == 0xCA) {
-          int bytesAvailable = Serial.availableForWrite();
+          //int bytesAvailable = Serial.availableForWrite();
           destraState = WAIT_START_LOW;
-          
+          SET_BUSY(HIGH);
           // // INTRUMENTAÇÃO - Pulso RX no primeiro byte de um novo comando
-          PULSE_RX();
+          //PULSE_RX();
           commandReceiveTime = micros();
           commandStartCounter = frameCounter;
-          SET_BUSY(HIGH);
 
         }
         break;
@@ -230,7 +230,7 @@ void destraHandler() {
           destraState = WAIT_COMMAND;
         } else {
           destraState = WAIT_START_HIGH;
-          SET_BUSY(LOW); // INTRUMENTAÇÃO
+          //SET_BUSY(LOW); // INTRUMENTAÇÃO
         }
         break;
         
@@ -244,7 +244,7 @@ void destraHandler() {
         } 
         else {
           destraState = WAIT_START_HIGH;
-          SET_BUSY(LOW); // INTRUMENTAÇÃO
+          //SET_BUSY(LOW); // INTRUMENTAÇÃO
         }
         break;
         
@@ -271,7 +271,7 @@ void destraHandler() {
         }
         else {
           destraState = WAIT_START_HIGH;
-          SET_BUSY(LOW); // INTRUMENTAÇÃO
+          //SET_BUSY(LOW); // INTRUMENTAÇÃO
         }
         break;
 
@@ -293,6 +293,8 @@ void destraHandler() {
   
   // Processar a requisição se tivermos uma mensagem completa
   if (destraState == PROCESS_REQUEST) {
+    
+    
     if (destraCommand == CMD_PEEK) {
       processPeekRequest();
     } else if (destraCommand == CMD_POKE) {
@@ -304,6 +306,7 @@ void destraHandler() {
     destraCommand = 0;
     destraState = WAIT_START_HIGH;  // Resetar para próxima requisição
 
+    Serial.flush();
     // INTRUMENTAÇÃO - Registrar tempo de processamento
     SET_BUSY(LOW);
     commandEndCounter = frameCounter;
@@ -317,7 +320,7 @@ void destraHandler() {
 // Função para processar requisição peek e enviar resposta
 void processPeekRequest() {
   // INTRUMENTAÇÃO - Pulso TX antes de enviar resposta
-  PULSE_TX();
+  //PULSE_TX();
 
   // Enviar cabeçalho da resposta
   Serial.write(0xCA);
@@ -349,7 +352,7 @@ void processPeekRequest() {
 // Função para processar requisição poke e enviar resposta
 void processPokeRequest() {
   // INTRUMENTAÇÃO - Pulso TX antes de enviar resposta
-  PULSE_TX();
+  //PULSE_TX();
     
   // Enviar cabeçalho da resposta
   Serial.write(0xCA);
