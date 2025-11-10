@@ -41,7 +41,7 @@ seus componentes principais.
 
 O Arduino UNO é programado através do Arduino IDE (Integrated Development Environment), 
 uma plataforma open-source baseada em Java que simplifica o processo de escrita, compilação 
-e upload de código. A linguagem de programação é uma variante simplificada de C++, o que 
+e upload de código. A linguagem de programação é uma variante simplificada de C, o que 
 torna o aprendizado acessível mesmo para usuários sem experiência prévia em programação 
 embarcada.
 
@@ -149,10 +149,7 @@ Arduino UNO durante uma sessão de medição.
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.65\textwidth]{recursos/figuras/fnirsi_dso153.png}
-    \caption{Osciloscópio digital FNIRSI® DSO-153 2-em-1. O equipamento é mostrado 
-    durante medição de sinais do Arduino UNO, com a sonda conectada a um dos pinos 
-    de debug. A tela colorida TFT exibe a forma de onda capturada em tempo real, 
-    permitindo análise de frequência, jitter e tempo de processamento de comandos.}
+    \caption{Osciloscópio digital FNIRSI® DSO-153 2-em-1}
     \label{fig:fnirsi_dso153}
 \end{figure}
 
@@ -248,13 +245,15 @@ A integração dessas funcionalidades na ferramenta DESTRA UI representa um avan
 
 \section{Cenários de Teste}
 
-Os testes realizados têm como objetivo avaliar o comportamento do protocolo DESTRA sob diferentes condições de operação, com foco em dois cenários: ferramenta e embarcado. Cada um desses cenários visa levantar as características de performance do protocolo, avaliando diferentes dimensões sob a perspectiva de testes.
+Os testes realizados têm como objetivo avaliar o comportamento do protocolo DESTRA sob diferentes condições de operação, com foco em dois cenários: ferramenta host e embarcado. Cada um desses cenários visa levantar as características de performance do protocolo, avaliando diferentes dimensões sob a perspectiva de testes.
 
 A escolha destas dimensões está diretamente relacionada à viabilidade do uso do protocolo em sistemas embarcados de maior criticidade, nos quais a previsibilidade temporal, a integridade dos dados e a capacidade de recuperação frente a falhas são requisitos essenciais.
 
-\subsection{Cenário da Ferramenta}
+\subsection{Cenário Host}
 
-Para o cenário da ferramenta foi desenvolvido um script Python (\texttt{performance\_tests.py}) complementar à ferramenta host que faz uso do protocolo DESTRA. O script realiza sequências de comando peek em uma variável inteira de tamanho 4 bytes.
+Nos testes a partir do cenário da ferramenta host desenvolvemos um script Python (\texttt{performance\_tests.py}) complementar à ferramenta host que faz uso do protocolo DESTRA. 
+
+O script realiza sequências de comando peek em uma variável inteira de tamanho 4 bytes. A listagem deste script é apresentada em \autoref{lst:performance_tests_py}.
 
 Os testes criados no script rodam com sua chamada em linha de comando, realizando as operações automaticamente e gerando arquivos de relatório no formato markdown e gráficos. A Tabela \ref{tab:cenarios_teste} detalha os objetivos de cada um dos testes do script:
 
@@ -406,30 +405,32 @@ void loop() {
 
 \section{Resultados Obtidos}
 
-A execução dos testes foi realizada conectando-se o Arduino ao host e utilizando o programa instrumentado no Arduino. O script Python foi executado através do comando:
+A execução dos testes foi realizada conectando-se o Arduino ao host e utilizando as ferrametnas descritas nas seções anteriores. Os cenários foram montados da seguinte forma:
+
+\begin{itemize}
+    \item \textbf{Cenário 1:} Scrpit Python \texttt{performance\_tests.py} + código Arduino instrumentado.
+    \item \textbf{Cenário 2:} Ferramenta Host (DESTRA UI) + Osciloscópio + código Arduino instrumentado.
+\end{itemize}
+
+\subsection{Resultados para o Cenário 1}
+
+Para capturar os dados para o Cenário de testes 1 o script Python \texttt{performance\_tests.py} foi executado através do seguinte comando em um "shell":
 
 \begin{verbatim}
 > python .\performance_tests.py COM5
 \end{verbatim}
 
-Este comando irá executar a sequência dos três testes (Latência, Estresse e Rajada), coletando dados de performance internos entre cada teste. Porém é preciso ressaltar que a limitação de memória do Arduino permite guardar somente 100 registros de dados de performance. Logo para os testes mais longos como Estresse e Burst os dados internos são limitados a apenas 100 amostras.
-A execução dos testes foi realizada conectando-se o Arduino ao host utilizando o programa 
-instrumentado. O script Python foi executado através do seguinte comando:
-
-\begin{verbatim}
-> python .\performance_tests.py COM5
-\end{verbatim}
-
-Este comando executou automaticamente a sequência dos três testes (Latência, Estresse e 
-Rajada), coletando dados de performance internos e gerando relatórios. A saída do console 
-durante a execução é apresentada na Listagem \ref{lst:performance_tests_output}:
+Este comando executou automaticamente a sequência dos três testes (Latência, Estresse e Rajada), coletando dados de performance internos e gerando relatórios conforme a saída do script exibida em \ref{lst:performance_tests_output}. 
 
 \begin{lstlisting}[language=bash, 
     caption={Saída do programa performance\_tests.py durante execução dos testes},
     label=lst:performance_tests_output,
-    extendedchars=false,
-    basicstyle=\ttfamily\footnotesize,
-    breaklines=true,
+    basicstyle=\ttfamily\tiny,
+    breaklines=false,
+    extendedchars=true,
+    inputencoding=utf8,
+    literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+             {ê}{{\^e}}1 {ã}{{\~a}}1 {õ}{{\~o}}1 {ç}{{\c{c}}}1,
     postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}]
 2025-10-22 21:13:04 - DESTRA.Protocol - INFO - Conectando
 2025-10-22 21:13:06 - DESTRA.Protocol - INFO - Conectado com sucesso!
@@ -454,7 +455,9 @@ durante a execução é apresentada na Listagem \ref{lst:performance_tests_outpu
 2025-10-22 21:59:49 - DESTRA.Protocol - INFO - Desconectado do Arduino
 \end{lstlisting}
 
-\subsubsection{Arquivos de Relatório Gerados}
+\textbf{Nota:} Porém é preciso ressaltar que a limitação de memória do Arduino permite guardar somente 100 registros de dados de performance. Logo para os testes mais longos como Estresse e Burst os dados internos são limitados a apenas 100 amostras.
+
+\subsection{Arquivos de Relatório Gerados}
 
 Ao término da execução, o script gerou automaticamente os seguintes arquivos de relatório:
 
@@ -563,7 +566,7 @@ Para os resultados de latência e jitter, a média de frame rate observada foi d
     \label{tab:latencia_embarcada}
 \end{table}
 
-\subsubsection{Análise}
+\subsubsection{Análise de resultados do teste de latência}
 
 A latência média de 10,016 ms indica um tempo de resposta estável e previsível. O desvio padrão de apenas 0,64 ms demonstra baixa variabilidade temporal. A inexistência de gaps confirma ausência de perda de pacotes. Essa estabilidade sugere que o protocolo DESTRA introduz mínimo overhead de comunicação.
 
@@ -657,7 +660,7 @@ Para o teste de estresse, foi configurada uma duração de 60 segundos realizand
     \label{tab:estresse_embarcada}
 \end{table}
 
-\subsubsection{Análise}
+\subsubsection{Análise dos resultados do teste de estresse}
 
 Durante 60 segundos de operação contínua, o sistema manteve taxa de erro zero. A pequena variação observada pode ser atribuída a interferências no buffer serial. Apesar desses picos, o frame rate médio permaneceu estável. Nenhum gap de sequência de comandos foi identificado, confirmando integridade lógica do protocolo sob estresse.
 
@@ -749,7 +752,7 @@ O teste de rajada foi executado disparando um total de 10.000 comandos (1.000 em
     \label{tab:rajada_embarcada}
 \end{table}
 
-\subsubsection{Análise}
+\subsubsection{Análise dos resultados do teste de rajada}
 
 No cenário de rajada, o protocolo processou 10.000 operações sem erros, mantendo latência média de 10,08 ms e jitter inferior a 0,12 ms. Esse comportamento demonstra excelente estabilidade sob alta taxa de requisições.
 
@@ -776,12 +779,17 @@ No cenário de rajada, o protocolo processou 10.000 operações sem erros, mante
     \label{tab:resumo_rajada}
 \end{table}
 
-\subsection{Testes com Osciloscópio}
+
+\subsection{Resultados para o Cenário 2}
+
+A execução do Cenário 2 foi feita com o osciloscópio conectado com a sonda as portas do Arduino e para cada teste a sonda foi movida para o pino alvo do teste,
+a ferramenta host (DESTRA UI) foi utilizada para estimular as saídas dos pinos enviando comandos de peek a taxas variadas entre 10hz, 100hz e 1khz.
+
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.75\textwidth, angle=90]{recursos/figuras/osciloscopio_setup.jpg}
-    \caption{Setup do osciloscópio conectado ao Arduino.}
+    \caption{Setup do osciloscópio conectado ao Arduino é mostrado durante medição de sinais do Arduino, com a sonda conectada a um dos pinos de debug. A tela colorida TFT exibe a forma de onda capturada em tempo real, permitindo análise de frequência, jitter e tempo de processamento de comandos}
     \label{fig:osciloscopio_setup}
 \end{figure}
 

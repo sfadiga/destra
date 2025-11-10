@@ -38,9 +38,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from typing import List, Dict, Tuple, Optional
 import json
-import csv
 from pathlib import Path
-import statistics
 from typing import List, Dict
 
 from destra import DestraProtocol
