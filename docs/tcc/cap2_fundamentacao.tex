@@ -1,1 +1,158 @@
 \chapter{Fundamentação}
+
+
+\section{Software Embarcado e Sistemas Críticos}
+
+Segundo \cite{ieee2000}, software embarcado é aquele projetado para operar em um sistema computacional integrado a um sistema maior, geralmente sujeito a restrições de tempo real, memória e energia, além de interagir diretamente com o ambiente físico por meio de sensores e atuadores.
+
+De forma mais simples, pode-se afirmar que o software embarcado é desenvolvido de maneira conjunta ao hardware no qual será executado. Em contraste com softwares voltados a computadores pessoais — nos quais a portabilidade entre plataformas similares é frequentemente possível, mesmo diante de diferenças de hardware — os sistemas embarcados são projetados para solucionar problemas de engenharia específicos. Consequentemente, o software precisa ser concebido de modo a satisfazer requisitos funcionais, temporais e estruturais definidos pela aplicação final, refletindo a forte dependência entre software e hardware.
+
+\subsection{Características: tempo real, restrições de hardware e determinismo}
+
+Um software embarcado apresenta diversas características fundamentais, entre elas comportamento de \textit{tempo real} e \textit{determinismo}. É comum associar “tempo real” ao tempo cronológico natural (tempo de relógio). Entretanto, em sistemas embarcados, tempo real refere-se à capacidade do software de executar suas funções dentro de limites temporais estritamente definidos durante a fase de projeto. Ou seja, o sistema deve garantir que o tempo necessário para a execução de cada ciclo não ultrapasse o tempo máximo alocado para aquelas operações.
+
+Cada sistema embarcado possui janelas temporais definidas com base em cálculos de desempenho, processamento de entradas e saídas e margens de segurança necessárias para garantir operação confiável.
+
+Uma consequência direta desse aspecto é o conceito de \textit{criticidade}, frequentemente associado a sistemas embarcados de tempo real. A criticidade, contudo, está mais relacionada ao sistema final e ao impacto de seu funcionamento sobre pessoas, bens ou o ambiente, do que ao software isoladamente — visto que o software, enquanto abstração, não é inerentemente perigoso.
+
+\subsection{Software Embarcado Crítico}
+
+Segundo \cite{Rierson2013}, software crítico de segurança (\textit{safety-critical software}) pode ser definido a partir do conceito mais amplo de segurança. Uma definição geral para segurança é a ``ausência de condições que possam causar morte, lesão, enfermidade, dano ou perda de equipamentos ou propriedade, ou prejuízo ao meio ambiente'' \cite{Rierson2013}. Já a definição específica de software crítico de segurança é mais subjetiva.
+
+O Institute of Electrical and Electronic Engineers (IEEE) define software crítico de segurança como:
+\begin{quote}
+    ``Software cujo uso em um sistema pode resultar em risco inaceitável. Software crítico de segurança inclui software cuja operação, ou falha em operar, pode levar a um estado perigoso, software destinado a recuperar-se de estados perigosos e software destinado a mitigar a severidade de um acidente'' \cite{Rierson2013}.
+\end{quote}
+
+O \textit{NASA Software Safety Standard} identifica um software como crítico de segurança quando ao menos um dos seguintes critérios é satisfeito \cite{Rierson2013}:
+
+\begin{itemize}
+    \item O software causa ou contribui para uma condição de sistema que, caso não seja controlada, possa resultar em morte, lesão grave ou danos significativos ao equipamento, à propriedade ou ao meio ambiente.
+    \item O software é responsável por detectar, monitorar ou controlar estados perigosos, condições anômalas ou situações que envolvam risco para pessoas, equipamentos ou missões.
+    \item O software executa funções necessárias para mitigar, isolar ou responder a falhas do sistema ou do hardware, prevenindo que tais falhas se tornem condições inseguras.
+    \item O software fornece informações críticas utilizadas para tomada de decisão operacional, segurança de voo, controle de missão ou manobras que, se incorretas, podem provocar um resultado perigoso.
+    \item O software é utilizado em sistemas de apoio à missão, simulação, teste ou validação, cujo comportamento incorreto possa induzir erros em sistemas críticos de voo, operação ou segurança.
+\end{itemize}
+
+\subsection{Aplicações de Software Embarcado em Setores de Alta Criticidade}
+
+A crescente complexidade dos produtos tecnológicos, associada à pressão por ciclos de desenvolvimento mais curtos e maior capacidade de atualização, tem impulsionado o uso intensivo de software embarcado em diferentes segmentos industriais. O software, por ser mais flexível, reconfigurável e economicamente vantajoso do que soluções puramente baseadas em hardware, tornou-se elemento central no projeto de sistemas modernos. 
+
+Embora diversos setores utilizem software embarcado, três deles se destacam pela elevada dependência de funções automatizadas e pelo impacto direto sobre a segurança humana: o setor aeroespacial, o automotivo e o médico-hospitalar. Esses domínios compartilham um aspecto fundamental: a necessidade de garantir níveis rigorosos de confiabilidade e segurança, o que exige a adoção de normas específicas para desenvolvimento, verificação, validação e certificação de software crítico.
+
+\subsubsection{Setor Aeroespacial}
+
+No setor aeroespacial, especialmente na aviação comercial, o software embarcado está presente em uma ampla gama de sistemas, desde módulos de entretenimento de cabine até sistemas de controle de voo, navegação, freios e gerenciamento de potência. A criticidade de cada função determina o rigor necessário no processo de desenvolvimento, sendo esses níveis formalizados pelo \textit{Design Assurance Level} (DAL), conforme estabelecido pela norma DO-178C.
+
+Os níveis de criticidade variam de DAL~A a DAL~E, onde:
+\begin{itemize}
+    \item \textbf{DAL A} - \textbf{Catastrófico}: condições de falha que podem resultar em catástrofe.
+    \item \textbf{DAL B} - \textbf{Severa}: condições de falha que podem resultar em falha severa do sistema, porém não catastrófica.
+    \item \textbf{DAL C} - \textbf{Maior}: condições de falha que podem resultar em degradação importante do desempenho.
+    \item \textbf{DAL D} - \textbf{Menor}: falhas que têm efeitos menores sobre a operação, inconveniencias.
+    \item \textbf{DAL E} - \textbf{Sem Efeito}: falhas sem impacto na segurança operacional.
+\end{itemize}
+
+Sistemas classificados nos níveis A e B exigem evidências extensivas de verificação, rastreabilidade e cobertura estrutural, refletindo a criticidade de suas funções. Eventos recentes na indústria reforçam a importância de processos rigorosos de certificação e verificação de software em sistemas de controle de voo.
+
+\subsubsection{Setor Automotivo}
+
+No setor automotivo, a incorporação de sistemas embarcados evoluiu drasticamente nas últimas décadas, abrangendo desde sistemas de infoentretenimento até algoritmos de controle de estabilidade, freios ABS, \textit{airbags}, direção assistida e funções autônomas. Da mesma forma que na aviação, a segurança dos ocupantes e ambiente em torno ao veículo é o fator determinante para o rigor do processo de desenvolvimento. 
+
+A norma de referência nesse domínio é a ISO~26262, que define os níveis de criticidade do \textit{Automotive Safety Integrity Level} (ASIL), que vão de ASIL~A (menor severidade) até ASIL~D (maior severidade). Os requisitos incluem análise de riscos, definição de métricas de segurança, validação e rastreabilidade de requisitos, e estratégias de teste orientadas a segurança funcional. Casos amplamente documentados na literatura técnica demonstram como falhas de software podem impactar diretamente a segurança veicular, reforçando a importância da conformidade com padrões rigorosos.
+
+\subsubsection{Setor Médico-Hospitalar}
+
+Na indústria médica, dispositivos embarcados tornaram-se essenciais para monitoramento, diagnóstico e tratamento. Equipamentos como bombas de infusão, respiradores, sistemas de radioterapia e equipamentos de imagem utilizam software que deve operar com precisão, confiabilidade e tolerância a falhas. 
+
+As normas IEC~62304 e ISO~14971 regulamentam o ciclo de vida do software e a análise de riscos para dispositivos médicos, estabelecendo requisitos de engenharia, verificação e manutenção. Eventos históricos envolvendo falhas de software em máquinas terapêuticas de alta energia ilustram a gravidade potencial de erros em sistemas deste setor e motivaram o desenvolvimento das normas atualmente vigentes.
+
+\subsubsection{Desafios Comuns: Testes e Certificação}
+
+Apesar das diferenças entre os setores, um desafio comum permeia o desenvolvimento de software embarcado crítico: a necessidade de gerar evidências objetivas de segurança por meio de testes e campanhas de ensaios. Testes não apenas demonstram o atendimento aos requisitos definidos em projeto, mas também fornecem a documentação necessária a autoridades certificadoras para comprovar conformidade com normas de segurança. Em ambientes de alta criticidade, a ausência de testes rigorosos compromete não apenas o produto final, mas a viabilidade de sua certificação e entrada em operação.
+
+\subsection{Importância da Previsibilidade Temporal}
+
+A previsibilidade temporal é um dos pilares fundamentais no desenvolvimento de sistemas embarcados de tempo real, especialmente quando esses sistemas operam em contextos críticos à segurança. Em tais aplicações, não basta que o software produza resultados corretos: é igualmente essencial que esses resultados sejam entregues dentro de limites temporais previamente especificados. Assim, além de requisitos funcionais, sistemas de tempo real possuem requisitos temporais que devem ser rigorosamente atendidos \cite{Laplante2011}.
+
+Em sistemas embarcados determinísticos, cada tarefa deve executar dentro de uma janela de tempo definida durante o projeto, frequentemente denominada \textit{tempo de ciclo} ou \textit{deadline}. O não cumprimento dessas restrições pode resultar em instabilidade, perda de controle, violação de margens de segurança ou até falhas catastróficas, dependendo do contexto operacional. Por essa razão, a análise do \textit{Worst-Case Execution Time} (WCET) é central nesses sistemas, pois fornece limites superiores para a duração de cada tarefa, garantindo que o sistema como um todo permaneça dentro de sua operação segura \cite{wilhelm2008wcet}.
+
+Do ponto de vista da certificação, normas como DO-178C para sistemas aeronáuticos, ISO 26262 para sistemas automotivos e IEC 62304 para dispositivos médicos enfatizam a necessidade de demonstrar que o comportamento temporal do software é previsível e analisável. Embora tais normas não utilizem explicitamente o termo ``previsibilidade temporal'', elas exigem evidências de determinismo, ausência de comportamentos assíncronos não analisados, controle sobre latências internas e conformidade com requisitos temporais definidos. Esses requisitos mostram que a previsibilidade temporal é, de fato, um elemento estruturante do processo de verificação e validação em sistemas críticos.
+
+Garantir previsibilidade temporal implica o monitoramento de métricas como latência, jitter, tempo de resposta e ocupação do ciclo de execução. Variações inesperadas nesses parâmetros podem indicar problemas de implementação, interferências entre tarefas, condições de corrida, priorização inadequada ou fluxo de execução ineficiente. Dessa forma, ferramentas capazes de observar, registrar e analisar esses fenômenos tornam-se essenciais durante o processo de teste e integração.
+
+Nesse contexto, a ferramenta desenvolvida neste trabalho apoia diretamente a análise de previsibilidade temporal, permitindo a inspeção em tempo real de variáveis internas, estados intermediários e comportamento do ciclo de execução. Ao oferecer visibilidade sobre características temporais do software — sem interferir significativamente em sua operação — a ferramenta contribui para a identificação precoce de problemas, para a avaliação de requisitos temporais e para a produção de evidências de conformidade exigidas em processos de certificação.
+
+
+\section{Testes em Sistemas Embarcados}
+
+Podem-se dividir os testes de software em sistemas embarcados em dois grandes grupos: testes de requisitos de alto nível e testes de requisitos de baixo nível. A execução adequada desses dois grupos é essencial para comprovar a aderência a normas de certificação, como a DO-178C. Embora os testes representem apenas uma parte do esforço total de verificação exigido para a certificação de software crítico, eles constituem uma etapa central e complexa — sobretudo os testes de requisitos de alto nível, os quais derivam dos requisitos de sistema e devem demonstrar a capacidade do software de se integrar corretamente ao sistema do qual fará parte.
+
+O objetivo dos testes de software é identificar erros introduzidos durante a implementação dos requisitos na linguagem de programação de alto nível, incluindo erros lógicos, de uso da linguagem e funcionais. Quanto maior o rigor na definição dos casos de teste, maior será a cobertura obtida e, consequentemente, maior a probabilidade de detectar falhas durante o desenvolvimento.
+
+Os testes são organizados em três fases principais:
+
+\begin{itemize}
+\item \textbf{Testes de Desenvolvimento} — Nesta fase, o programador traduz os requisitos de alto e baixo nível para a linguagem de programação adotada. Os testes são executados em plataformas de desenvolvimento, que geralmente possuem baixa representatividade em relação ao sistema final.
+\item \textbf{Testes de Requisitos de Software} — Nesta etapa, os testes são elaborados com base nos requisitos utilizados na codificação. Para cada requisito são definidos casos de teste específicos, podendo haver mais de um caso por requisito.
+\item \textbf{Testes de Integração} — Os testes de integração são realizados em ambientes representativos do sistema final, abrangendo principalmente os requisitos de alto nível e os requisitos de sistema. Nessa fase, não é permitido o uso de instrumentos ou técnicas que possibilitem a coleta de informações internas do software de forma intrusiva, de modo a não interferir na execução normal do sistema.
+\end{itemize}
+
+O presente trabalho tem como objetivo auxiliar as etapas de testes de requisitos e, especialmente, de testes de integração, nas quais o uso de kits de desenvolvimento deixa de ser adequado e o ambiente de testes deve apresentar maior representatividade em relação ao sistema final. Em sistemas aeroespaciais, é comum que a fase final de testes ocorra em um ambiente denominado Iron Bird, que consiste em um laboratório contendo todos os sistemas reais da aeronave conectados e configurados para ensaios de integração. Nesse ambiente, não é possível empregar técnicas de depuração que interrompam a execução do software para inspeção de seu estado interno. Assim, ferramentas de peek/poke tornam-se particularmente valiosas.
+
+
+\section{Protocolos de Comunicação para Depuração}
+
+A comunicação entre ferramentas de depuração e sistemas embarcados desempenha um papel essencial no processo de verificação e validação, sobretudo em ambientes nos quais o acesso físico aos sinais internos do software é limitado ou inexistente. Para que seja possível realizar operações de inspeção, monitoração ou injeção de valores — como nos mecanismos de peek/poke — é necessário o uso de protocolos de comunicação confiáveis, determinísticos e adequados às restrições do sistema embarcado.
+
+Diversos meios físicos e protocolos são tradicionalmente empregados para esse fim, entre os quais se destacam UART, CAN e Ethernet. Cada um desses protocolos apresenta vantagens e limitações específicas, e normalmente sua escolha também está associada a escolha da arquitetura do sistema no qual o software irá executar, sendo assim uma decisão sistema e mais abrangente, é comum o protocolo estar associado a uma restrição física imposta por decisões no nível de hardware sejam elas derivadas de requisitos de custo ou requisitos funcionais. A caracteristica comum a todas os protocolos escolhidos é que sigam o paradigma de comunicação serial. A comunicação via UART é simples, de baixo custo e amplamente disponível, porém oferece taxas de transmissão relativamente limitadas e menor robustez contra erros. O CAN fornece elevada imunidade a ruído e mecanismos nativos de priorização de mensagens, sendo bastante apropriado para ambientes automotivos e aeroespaciais, mas possui capacidade de carga útil reduzida por quadro. O Ethernet apresenta alta velocidade e baixa latência, porém exige uma camada extra que garanta seu uso em sistemas embarcados de tempo real/críticos o que pode introduzir sobrecarga e maior custo de implementação em sistemas embarcados críticos.
+
+Independentemente do meio físico adotado, protocolos de depuração geralmente seguem um modelo de comunicação request/response, no qual uma ferramenta externa envia comandos e o dispositivo embarcado responde de forma determinística. Esse paradigma facilita a rastreabilidade das interações e permite que comandos sejam estruturados de forma padronizada, com semântica clara e verificável. Para garantir a correta interpretação das mensagens, é fundamental definir mecanismos de framing, incluindo marcação de início e fim de pacote, numeração de sequência e regras explícitas de encapsulamento dos dados.
+
+A confiabilidade da comunicação depende também da detecção de erros. Por esse motivo, técnicas de checagem de integridade, como checksums ou Cyclic Redundancy Checks (CRC), são amplamente utilizadas. O CRC destaca-se pela capacidade de detectar padrões de erro específicos, sendo adequado para ambientes sujeitos a interferências eletromagnéticas, comuns em sistemas aeronáuticos e automotivos. A adoção de CRCs reduz a probabilidade de aceitação de quadros corrompidos e contribui diretamente para a robustez geral do protocolo.
+
+Além das questões relacionadas à integridade dos dados, protocolos de depuração devem lidar com desafios práticos, tais como ruído no canal de comunicação, perda de pacotes, duplicação de mensagens e troca na ordem de chegada. Esses fenômenos podem resultar de limitações físicas, contenção no barramento, falhas temporárias ou restrições de temporização. Por esse motivo, estratégias como retransmissão de quadros, temporização com timeouts, confirmação positiva (ACK) e numeração sequencial são frequentemente adotadas para garantir a operação correta do sistema.
+
+A discussão destes elementos constitui a base técnica necessária para o desenvolvimento de um protocolo personalizado de comunicação para depuração, adaptado às restrições e requisitos de sistemas embarcados críticos. A compreensão das características, limitações e mecanismos de confiabilidade dos protocolos existentes permite projetar soluções mais robustas, adequadas ao contexto aeroespacial e alinhadas às práticas recomendadas de verificação e certificação.
+
+\section{Operações Peek, Poke e Telemetria}
+
+As operações de inspeção e modificação remota de memória – tradicionalmente conhecidas como peek (leitura) e poke (escrita) – constituem um dos mecanismos mais antigos e difundidos no contexto de depuração de sistemas embarcados. Inicialmente popularizadas em plataformas de microcomputadores e linguagens interpretadas, essas operações foram posteriormente incorporadas ao desenvolvimento de sistemas embarcados como um meio simples e direto de acessar variáveis internas durante a execução \cite{dorfman2008obscurity}. No ambiente moderno, apesar de evoluções significativas em ferramentas e protocolos, o conceito permanece central para arquiteturas de debug, sendo frequentemente encapsulado em interfaces padronizadas, APIs ou camadas de abstração \cite{singh2020peek}.
+
+A operação peek consiste na leitura remota de posições de memória, registradores ou variáveis internas do software embarcado, proporcionando visibilidade do estado interno sem interromper a execução. Essa capacidade é fundamental em sistemas de tempo real, nos quais interrupções artificiais podem distorcer o comportamento do software ou mascarar defeitos críticos \cite{Zuberi1999rtdebugging}. Já a operação poke permite a escrita remota de valores nesses mesmos elementos, possibilitando injeção de estados, alteração temporária de parâmetros e verificação de respostas do sistema frente a condições específicas. Ambas as operações se tornaram parte essencial de arquiteticas de depuração on-chip, como JTAG, Nexus e ARM CoreSight, que utilizam conceitos semelhantes para acesso estruturado e controlado ao hardware e ao software durante a execução \cite{document_onchip}.
+
+Complementarmente, a telemetria desempenha um papel distinto e igualmente importante. Diferentemente das operações on-demand de peek e poke, a telemetria consiste no envio assíncrono, periódico ou orientado a eventos de dados internos do software para um sistema externo de monitoramento. Essa estratégia é amplamente empregada em sistemas críticos e de tempo real, pois permite observar o comportamento do sistema ao longo do tempo, sem interferência perceptível no fluxo de execução \cite{venkateswarlu2015embedded}. A telemetria é essencial para detectar anomalias, verificar tendências e avaliar o cumprimento de requisitos temporais — aspectos particularmente relevantes em sistemas críticos conforme descrito em normas como DO-178C \cite{rtca2011do178c}.
+
+Apesar de sua utilidade, operações remotas de inspeção e escrita introduzem riscos inerentes. O acesso arbitrário à memória pode comprometer a integridade dos dados, violar funções de segurança ou alterar fluxos de controle essenciais ao comportamento correto do software. Esses riscos já são amplamente documentados em literatura de depuração embarcada, que destaca a necessidade de mecanismos de proteção, autenticação e delimitação rigorosa das regiões de memória acessíveis \cite{schneider2004secrets}. Em sistemas críticos, esses controles são ainda mais importantes, dado que falhas induzidas por operações de debug podem gerar violações de requisitos funcionais e de segurança \cite{Rierson2013}. Assim, operações de peek e poke devem ser implementadas de forma atômica, com validação rigorosa e sem possibilidade de interferir em seções de código sensíveis ou temporizações essenciais.
+
+Outro aspecto relevante é que operações contínuas de peek/poke — isto é, a tentativa de monitorar uma variável por meio de leituras repetitivas — não são adequadas para sistemas em tempo real. Além de aumentar a carga no canal de comunicação, leituras frequentes podem introduzir atrasos ou sobrecarga no firmware, comprometendo o determinismo do sistema. Por esse motivo, ferramentas adequadas à instrumentação de sistemas críticos empregam telemetria estruturada e coleta orientada a eventos, em vez de leituras incessantes \cite{christof2013debugging}.
+
+No contexto das ferramentas contemporâneas, diversas arquiteturas implementam mecanismos equivalentes aos descritos. O PX4, por exemplo, utiliza o uORB como middleware de mensagens, disponibilizando mecanismos de depuração baseados em tópicos internos, embora não forneça acesso direto à memória como um peek/poke tradicional. Microcontroladores STM32 oferecem depuração via GDB Server incorporado, permitindo inspeção de registradores e variáveis durante pausa do processador, mas sem capacidade integrada de depuração não intrusiva em execução contínua. Já o Microchip Data Visualizer opera por meio de canais de dados instrumentados, fornecendo telemetria estruturada e escrita remota de parâmetros, aproximando-se de um sistema híbrido entre telemetria e controle \cite{ripley2016embedded}.
+
+A inclusão desta seção é fundamental para contextualizar o núcleo técnico da ferramenta proposta neste trabalho. A compreensão dos conceitos de peek, poke e telemetria, bem como de suas limitações, riscos e implementações equivalentes na indústria, fornece o embasamento necessário para justificar o desenvolvimento de um protocolo personalizado de depuração. Além disso, conecta diretamente o escopo deste trabalho às práticas modernas de instrumentação embarcada e às exigências normativas relacionadas à confiabilidade e à verificação independente em sistemas críticos.
+
+
+\section{Testes Automatizados e Testbeds}
+
+A automação de testes em sistemas embarcados é um elemento essencial para garantir confiabilidade, repetibilidade e rastreabilidade no ciclo de desenvolvimento, especialmente em aplicações críticas. Para isso, a utilização de testbeds ou bancadas de teste estruturadas permite reproduzir cenários reais de operação, validar requisitos e identificar regressões de maneira sistemática e controlada. Um testbed típico inclui hardware de suporte, instrumentos de medição, controladores externos, ambientes de simulação e ferramentas capazes de gerar estímulos e coletar respostas do dispositivo sob teste (DUT). Em sistemas embarcados, essa infraestrutura geralmente envolve um testbench que interage diretamente com o firmware por meio de interfaces de comunicação, barramentos ou instrumentação específica.
+
+Do ponto de vista metodológico, diferentes abordagens de teste são empregadas conforme o grau de conhecimento interno do sistema. Testes caixa-preta avaliam apenas entradas e saídas, sem acesso ao código ou à lógica interna, sendo úteis para validação funcional e verificação de requisitos. Já os testes caixa-branca exploram a estrutura interna do software, permitindo avaliar caminhos de execução, condições e variáveis internas — abordagem essencial para conformidade com normas como DO-178C e ISO 26262, que exigem cobertura de código em diferentes níveis de certificação. Em sistemas embarcados, a combinação de ambas as abordagens é comum, dado que testes funcionais isolados não são suficientes para capturar anomalias relacionadas a concorrência, temporização ou integração com o hardware.
+
+A execução de testes automatizados por comandos remotos tem ganhado ampla adoção devido à capacidade de controlar o DUT sem intervenção humana direta. Nessa abordagem, o testbench envia comandos estruturados ao firmware, solicita respostas específicas ou aciona funções internas instrumentadas. Além de permitir maior repetibilidade, esse modelo habilita a criação de suites de teste extensas, execução contínua (CI/CD) e integração com frameworks modernos de validação. Protocolos remotos também possibilitam testes stress, injeção de falhas, medições de tempo e coleta automatizada de métricas internas.
+
+Um elemento crítico para qualquer arquitetura de testes automatizados é a produção de logs estruturados. Registros formais, coerentes e com semântica definida permitem reconstruir o comportamento do sistema, identificar falhas, correlacionar eventos e validar critérios de aceitação. Diferentemente de logs textuais livres, formatos estruturados — como JSON, CBOR ou mensagens binárias — facilitam análise automatizada, integração com ferramentas de rastreamento e geração de relatórios. Em ambientes regulados, logs estruturados apoiam requisitos de traceability e verification evidence exigidos por auditorias.
+
+No contexto de sistemas embarcados modernos, técnicas avançadas como HIL (Hardware-in-the-Loop), SIL (Software-in-the-Loop) e PIL (Processor-in-the-Loop) ampliam significativamente a capacidade de validação. Testes SIL simulam o firmware em ambiente nativo ou emulador, permitindo validações rápidas antes da integração com hardware real. Testes PIL executam o código no processador real ou simulado, assegurando correção funcional e temporal da implementação final. Finalmente, testes HIL permitem avaliar o sistema embarcado interagindo com modelos de planta, sensores simulados e atuadores virtuais, sendo amplamente utilizados na indústria aeronáutica, automotiva e de robótica para validar cenários complexos e dinâmicos com alta fidelidade.
+
+
+\section{Trabalhos Relacionados}
+
+Diversas ferramentas e metodologias têm sido propostas para apoiar o processo de teste, depuração e verificação de software embarcado, especialmente em sistemas críticos, nos quais a previsibilidade temporal, a rastreabilidade e a não intrusividade são requisitos fundamentais. Entre as soluções existentes destacam-se depuradores JTAG/SWD, registradores de eventos (\textit{trace loggers}), analisadores lógicos, barramentos proprietários de depuração e plataformas de teste baseadas em hardware de bancada. Embora amplamente utilizadas nas fases iniciais de desenvolvimento, essas ferramentas apresentam limitações significativas quando aplicadas em ambientes representativos ou integrados, como observado por Rierson \cite{Rierson2013}.
+
+Uma limitação recorrente envolve o caráter intrusivo das técnicas tradicionais de depuração. Métodos como \textit{breakpoints}, \textit{single stepping} e instrumentação direta alteram o comportamento temporal e o fluxo de execução do software, inviabilizando sua aplicação em contextos de certificação e operação real. Essa restrição é particularmente relevante em sistemas embarcados de missão crítica, nos quais a temporização deve ser preservada integralmente \cite{nasa_software_safety_standard}. Além disso, muitas dessas ferramentas dependem de acesso físico ao microcontrolador ou a interfaces disponíveis apenas em protótipos, tornando seu uso inviável em plataformas integradas de grande complexidade, como aeronaves e sistemas aeroespaciais.
+
+Outras abordagens incluem mecanismos proprietários de telemetria, depuração via CAN ou UART e serviços internos de diagnóstico. Contudo, tais soluções geralmente carecem de padronização, são pouco extensíveis e nem sempre são projetadas com foco em segurança, integridade dos dados ou tolerância a falhas. A ausência de protocolos formais de integridade, autenticação e controle de sessão limita sua utilização em ambientes críticos, onde requisitos rigorosos são estabelecidos por normas como a DO-178C \cite{rtca2011do178c}.
+
+Diante dessas limitações, observa-se um \textit{gap} técnico relevante: a falta de uma ferramenta capaz de prover depuração não intrusiva, execução remota de comandos, coleta estruturada de dados e operação em ambientes representativos do sistema final, preservando previsibilidade temporal e confiabilidade operacional. A literatura e padrões industriais recomendam métodos de verificação independentes, rastreáveis e com impacto mínimo no comportamento do software, reforçando essa lacuna \cite{ieee2000}.
+
+A solução proposta neste trabalho busca preencher esse espaço ao fornecer uma ferramenta modular, orientada a comandos remotos, baseada em protocolo estruturado e voltada ao apoio de testes e integração em sistemas críticos. Ao posicionar-se entre depuradores tradicionais e ferramentas proprietárias de telemetria, a abordagem apresentada contribui para o estado da arte ao combinar não intrusividade, padronização e extensibilidade, alinhando-se às melhores práticas recomendadas por normas consolidadas da engenharia de software crítico.

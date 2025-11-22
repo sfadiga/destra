@@ -1,0 +1,123 @@
+%% USPSC-TCC-pre-textual-IFSC.tex
+%% Camandos para definição do tipo de documento (tese ou dissertação), área de concentração, opção, preâmbulo, titulação 
+%% referentes ao Programa de Pós-Graduação o IFSC
+\instituicao{Instituto de F\'isica de S\~ao Carlos, Universidade de S\~ao Paulo}
+\unidade{INSTITUTO DE F\'ISICA DE S\~AO CARLOS}
+\unidademin{Instituto de F\'isica de S\~ao Carlos}
+\universidademin{Universidade de S\~ao Paulo}
+
+\notafolharosto{Vers\~ao original}
+%Para versão original em inglês, comente o comando/declaração 
+%     acima(inclua % antes do comando acima) e tire a % do 
+%     comando/declaração abaixo no idioma do texto
+%\notafolharosto{Original version}
+ 
+%Para versão corrigida, comente o comando/declaração da 
+%     versão original acima (inclua % antes do comando acima) 
+%     e tire a % do comando/declaração de um dos comandos 
+%     abaixo em conformidade com o idioma do texto
+%\notafolharosto{Vers\~ao corrigida \\(Vers\~ao original dispon\'ivel na Unidade que aloja o Programa)}
+%\notafolharosto{Corrected version \\(Original version available on the Program Unit)}
+
+% Para utilizar Sistema Numérico diferente da ABNT
+% Numeração entre colchetes:
+%\citebrackets[] 
+% Numeração entre parenteses:
+
+% ---
+% dados complementares para CAPA e FOLHA DE ROSTO
+% ---
+\universidade{UNIVERSIDADE DE S\~AO PAULO}
+\titulo{Modelo para TCC em \LaTeX\ utilizando o Pacote USPSC para o IFSC}
+%Se o idioma for o ingLês, inclua % no comando acima e retire a % do comando abaixo
+%\titulo{Model for TCC in \LaTeX\ using the USPSC Package to the IFSC}
+\titleabstract{Model for TCC in \LaTeX\ using the USPSC Package to the IFSC}
+\tituloresumo{Modelo para TCC em \LaTeX\ utilizando o Pacote USPSC para o IFSC}
+\autor{Jos\'e da Silva}
+\autorficha{Silva, Jos\'e da}
+\autorabr{SILVA, J.}
+
+\cutter{S856m}
+% Para gerar a ficha catalográfica sem o Código Cutter, basta 
+% incluir uma % na linha acima e tirar a % da linha abaixo
+%\cutter{ }
+
+\local{S\~ao Carlos}
+\data{2023}
+% Quando for Orientador, basta incluir uma % antes do comando abaixo
+\renewcommand{\orientadorname}{Orientadora:}
+% Quando for Coorientadora, basta tirar a % utilizar o comando abaixo
+%\newcommand{\coorientadorname}{Coorientador:}
+\orientador{Profa. Dra. Elisa Gon\c{c}alves Rodrigues}
+\orientadorcorpoficha{orientadora Elisa Gon\c{c}alves Rodrigues}
+\orientadorficha{Rodrigues, Elisa Gon\c{c}alves, orient}
+%Se houver co-orientador, inclua % antes das duas linhas (antes dos comandos \orientadorcorpoficha e \orientadorficha) 
+%          e tire a % antes dos 3 comandos abaixo
+%\coorientador{Prof. Dr. Jo\~ao Alves Serqueira}
+%\orientadorcorpoficha{orientadora Elisa Gon\c{c}alves Rodrigues ;  co-orientador Jo\~ao Alves Serqueira}
+%\orientadorficha{Rodrigues, Elisa Gon\c{c}alves, orient. II. Serqueira, Jo\~ao Alves, co-orient}
+
+\notaautorizacao{AUTORIZO A REPRODU\c{C}\~AO E DIVULGA\c{C}\~AO TOTAL OU PARCIAL DESTE TRABALHO, POR QUALQUER MEIO CONVENCIONAL OU ELETR\^ONICO PARA FINS DE ESTUDO E PESQUISA, DESDE QUE CITADA A FONTE.}
+% Se o idioma for o inglês, inclua a % antes do campo \notaautorizacao acima e retire a % da linha abaixo
+%\notaautorizacao{I AUTORIZE THE REPRODUCTION AND DISSEMINATION OF TOTAL OR PARTIAL COPIES OF THIS DOCUMENT, BY CONVENCIONAL OR ELECTRONIC MEDIA FOR STUDY OR RESEARCH PURPOSE, SINCE IT IS REFERENCED.}
+\notabib{Ficha catalogr\'afica revisada pelo Servi\c{c}o de Biblioteca e Informa\c{c}\~ao Prof. Bernhard Gross, com os dados fornecidos pelo(a) autor(a)}
+
+\newcommand{\programa}[1]{
+
+% BCFBp ==========================================================================
+\ifthenelse{\equal{#1}{BCFBp}}{
+    \tipotrabalho{Monografia (Trabalho de Conclus\~ao de Curso)}
+	\tipotrabalhoabs{Monograph (Conclusion Course Paper)}
+	\preambulo{Trabalho de conclus\~ao de curso apresentado ao Programa de Gradua\c{c}\~ao em F\'isica do Instituto de F\'isica de S\~ao Carlos, da Universidade de S\~ao Paulo, para a obten\c{c}\~ao do t\'itulo de Bacharel em Ci\^encias F\'isicas e Biomoleculares.}
+	\notaficha{Trabalho de Conclus\~ao de Curso (Gradua\c{c}\~ao Bacharelado em Ci\^encias F\'isicas e Biomoleculares)}
+    }{
+% BCFBe ==========================================================================
+\ifthenelse{\equal{#1}{BCFBe}}{
+	\renewcommand{\areaname}{Concentration area:}
+	\renewcommand{\opcaoname}{Option:}
+	\renewcommand{\orientadorname}{Advisor:}
+	\tipotrabalho{Monografia (Trabalho de Conclus\~ao de Curso)}
+	\tipotrabalhoabs{Monograph (Conclusion Course Paper)}
+	\preambulo{Conclusion course paper presented to the Undergraduate Program in Physics at Instituto de F\'isica de S\~ao Carlos, da Universidade de S\~ao Paulo, to obtain the degree of Bachelor in Physical and Biomolecular Sciences.}
+	\notaficha{Conclusion Course Paper (Undergraduate Program Bachelor's in Physical and Biomolecular Sciences)}
+}{    
+% BFp ===========================================================================
+\ifthenelse{\equal{#1}{BFp}}{
+    \tipotrabalho{Monografia (Trabalho de Conclus\~ao de Curso)}
+	\tipotrabalhoabs{Monograph (Conclusion Course Paper)}
+	\preambulo{Trabalho de conclus\~ao de curso apresentado ao Programa de Gradua\c{c}\~ao em F\'isica do Instituto de F\'isica de S\~ao Carlos, da Universidade de S\~ao Paulo, para a obten\c{c}\~ao do t\'itulo de Bacharel em F\'isica.}
+	\notaficha{Trabalho de Conclus\~ao de Curso (Programa de Gradua\c{c}\~ao Bacharelado em F\'isica)}
+    }{
+% BFe ===========================================================================
+\ifthenelse{\equal{#1}{BFe}}{
+	\renewcommand{\areaname}{Concentration area:}
+	\renewcommand{\opcaoname}{Option:}
+	\renewcommand{\orientadorname}{Advisor:}
+	\tipotrabalho{Monografia (Trabalho de Conclus\~ao de Curso)}
+	\tipotrabalhoabs{Monograph (Conclusion Course Paper)}
+	\preambulo{Conclusion course paper presented to the Undergraduate Program in Physics at Instituto de F\'isica de S\~ao Carlos, da Universidade de S\~ao Paulo, to obtain the degree of Bachelor in Physics.}
+	\notaficha{Conclusion Course Paper (Undergraduate Program Bachelor's in Physical)}
+}{    
+% BFCp ===========================================================================
+\ifthenelse{\equal{#1}{BFCp}}{
+   	\tipotrabalho{Monografia (Trabalho de Conclus\~ao de Curso)}
+	\tipotrabalhoabs{Monograph (Conclusion Course Paper)}
+	\preambulo{Trabalho de conclus\~ao de curso apresentado ao Programa de Gradua\c{c}\~ao em F\'isica do Instituto de F\'isica de S\~ao Carlos, da Universidade de S\~ao Paulo, para a obten\c{c}\~ao do t\'itulo de Bacharel em F\'isica Computacional.}
+	\notaficha{Trabalho de Conclus\~ao de Curso (Gradua\c{c}\~ao em F\'isica Computacional)}
+    }{
+% BFCe ===========================================================================
+\ifthenelse{\equal{#1}{BFCe}}{
+	\renewcommand{\areaname}{Concentration area:}
+	\renewcommand{\opcaoname}{Option:}
+	\renewcommand{\orientadorname}{Advisor:}
+	\tipotrabalho{Monografia (Trabalho de Conclus\~ao de Curso)}
+	\tipotrabalhoabs{Monograph (Conclusion Course Paper)}
+	\preambulo{Conclusion course paper presented to the Undergraduate Program in Physics at Instituto de F\'isica de S\~ao Carlos, da Universidade de S\~ao Paulo, to obtain the degree of Bachelor in Computational Physics.}
+	\notaficha{Conclusion Course Paper (Undergraduate Program Bachelor's in Computational Physics)}
+}{    
+% Outros 
+	\tipotrabalho{Monografia (Trabalho de Conclus\~ao de Curso)}
+	\tipotrabalhoabs{Monografia (Trabalho de Conclus\~ao de Curso)}
+	\preambulo{Trabalho de Conclus\~ao de Curso apresentado ao Programa de Gradua\c{c}\~ao em F\'isica do Instituto de F\'isica de S\~ao Carlos, da Universidade de S\~ao Paulo, para a obten\c{c}\~ao do t\'itulo de Bacharel em  ...}
+	\notaficha{Trabalho de Conclus\~ao de Curso (Gradua\c{c}\~ao em ...)}	
+}}}}}}}

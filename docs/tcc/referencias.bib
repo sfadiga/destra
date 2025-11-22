@@ -2,6 +2,14 @@
 % FONTES PRIMÁRIAS - DOCUMENTOS ANALISADOS
 % ============================================================
 
+@misc{fadiga2025destra,
+  title        = {{DESTRA}: Depurador de Sistemas em Tempo Real},
+  author       = {Fadiga, Sandro},
+  year         = {2025},
+  howpublished = {\url{https://github.com/sfadiga/destra}},
+  note         = {Repositório oficial do projeto, contendo código-fonte, documentação e exemplos}
+}
+
 @article{singh2020peek,
   title={Turn Antiquated Peek and Poke Interfaces in Embedded Module to Modern Web {APIs}},
   author={Singh, Brijendra},
@@ -36,6 +44,60 @@
   title={On-Chip Debugging: A Survey of {JTAG}, Nexus, and {CoreSight} Architectures},
   year={2015},
   note={Disponível em bases de dados de engenharia eletrônica}
+}
+
+@book{ieee2000,
+  author = {{Institute of Electrical and Electronics Engineers}},
+  title = {The Authoritative Dictionary of {IEEE} Standards Terms},
+  edition = {7},
+  publisher = {IEEE Press},
+  address = {New York},
+  year = {2000},
+  note = {IEEE Std 100}
+}
+
+@book{Rierson2013,
+    author    = {Rierson, Leanna},
+    title     = {Developing Safety-Critical Software: A Practical Guide for Aviation Software and DO-178C Compliance},
+    publisher = {CRC Press},
+    year      = {2013},
+    address   = {Boca Raton},
+    isbn      = {978-1-4398-9296-8}
+}
+
+@standard{ieee1228_1994,
+  title        = {IEEE Standard for Software Safety Plans},
+  number       = {IEEE 1228-1994},
+  year         = {1994},
+  publisher    = {IEEE},
+  note         = {Definição de "safety-critical software" como “software whose inadvertent response …”}  
+}
+
+@standard{nasa_software_safety_standard,
+  title        = {NASA Software Safety Standard},
+  number       = {NASA-STD 8719.13},
+  year         = {2008},  % verificar versão, pode mudar
+  organization = {NASA},
+  url          = {https://standards.nasa.gov/standard/nasa/nasa-std-871913},  % site oficial da norma
+  note         = {Critérios para software ser considerado safety-critical pela NASA}  
+}
+
+@book{Laplante2011,
+  author    = {Philip A. Laplante},
+  title     = {Real-Time Systems Design and Analysis},
+  edition   = {4},
+  year      = {2011},
+  publisher = {Wiley},
+}
+
+@article{wilhelm2008wcet,
+  author  = {Reinhard Wilhelm and Jakob Engblom and Andreas Ermedahl and others},
+  title   = {The Worst-Case Execution-Time Problem -- Overview of Methods and Survey of Tools},
+  journal = {ACM Transactions on Embedded Computing Systems},
+  volume  = {7},
+  number  = {3},
+  year    = {2008},
+  pages   = {1--53}
 }
 
 % ============================================================
@@ -79,6 +141,7 @@
   title={{System V Application Binary Interface}},
   author={{SCO}},
   edition={4.1},
+  institution={AT&T},
   year={1997},
   month={March},
   url={https://www.sco.com/developers/devspecs/gabi41.pdf},

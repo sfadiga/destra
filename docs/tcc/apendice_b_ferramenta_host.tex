@@ -1,15 +1,15 @@
 % ============================================================================
-% APÊNDICE B - FERRAMENTA HOST DESTRA UI
+% APENDICE B - FERRAMENTA HOST DESTRA UI
 % ============================================================================
 \chapter{Ferramenta Host DESTRA UI}
 
 \section{Módulo de Protocolo - destra.py}
 
-Este apêndice apresenta a implementação completa da ferramenta host DESTRA UI, desenvolvida em Python para comunicação com o protocolo Arduino e analise de arquivos ELF.
+Este apendice apresenta a implementacao completa da ferramenta host DESTRA UI, desenvolvida em Python para comunicacao com o protocolo Arduino e analise de arquivos ELF.
 
-\subsection{Protocolo de Comunicação}
+\subsection{Protocolo de Comunicacao}
 
-\begin{lstlisting}[language=Python, caption={Módulo destra.py - Protocolo de comunicação DESTRA}, label=lst:destra_py, basicstyle=\tiny\ttfamily, breaklines=true, numbers=left, numberstyle=\tiny, stepnumber=1, showstringspaces=false]
+\begin{lstlisting}[language=Python, caption={Módulo destra.py - Protocolo de comunicacao DESTRA}, label=lst:destra_py, basicstyle=\tiny\ttfamily, breaklines=true, numbers=left, numberstyle=\tiny, stepnumber=1, showstringspaces=false]
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -516,7 +516,7 @@ if __name__ == "__main__":
 
 \section{Interface Grafica - destra\_ui.py}
 
-\subsection{Implementação da GUI}
+\subsection{Implementacao da GUI}
 
 \begin{lstlisting}[language=Python, caption={Interface grafica DESTRA UI}, label=lst:destra_ui_py, basicstyle=\tiny\ttfamily, breaklines=true, numbers=left, numberstyle=\tiny, stepnumber=1, showstringspaces=false]
 #!/usr/bin/env python3
@@ -1024,7 +1024,7 @@ class ElfDataDictionary:
                         "is_struct": False,
                     }
                 else:
-                    # Tipo base desconhecido, armazenar informação bruta
+                    # Tipo base desconhecido, armazenar informacao bruta
                     type_info = {
                         "base_type": name_str,
                         "size": size_val,
@@ -1035,7 +1035,7 @@ class ElfDataDictionary:
                     }
 
         elif die.tag == "DW_TAG_typedef":
-            # Seguir o typedef até o tipo real
+            # Seguir o typedef ate o tipo real
             type_attr = die.attributes.get("DW_AT_type")
             if type_attr:
                 ref_offset = self._get_reference_offset(type_attr, cu)
@@ -1049,7 +1049,7 @@ class ElfDataDictionary:
 
         elif die.tag == "DW_TAG_pointer_type":
             type_info = {
-                "base_type": "uint16",  # Ponteiros são 16-bit no Arduino Uno
+                "base_type": "uint16",  # Ponteiros sao 16-bit no Arduino Uno
                 "size": 2,
                 "is_signed": False,
                 "is_pointer": True,
@@ -1063,7 +1063,7 @@ class ElfDataDictionary:
                 ref_offset = self._get_reference_offset(type_attr, cu)
                 element_type = type_cache.get(ref_offset, {})
 
-                # Obter dimensões do array
+                # Obter dimensoes do array
                 dimensions = []
                 for child in die.iter_children():
                     if child.tag == "DW_TAG_subrange_type":
@@ -1085,7 +1085,7 @@ class ElfDataDictionary:
             name = die.attributes.get("DW_AT_name")
             size = die.attributes.get("DW_AT_byte_size")
 
-            if size:  # Processar apenas definições completas de struct
+            if size:  # Processar apenas definicoes completas de struct
                 struct_name = name.value.decode("utf-8") if name else "anonymous_struct"
                 type_info = {
                     "base_type": "struct",
@@ -1110,7 +1110,7 @@ class ElfDataDictionary:
                 type_info["members"] = members
 
         elif die.tag in ["DW_TAG_const_type", "DW_TAG_volatile_type"]:
-            # Estes são qualificadores de tipo, seguir até o tipo real
+            # Estes sao qualificadores de tipo, seguir ate o tipo real
             type_attr = die.attributes.get("DW_AT_type")
             if type_attr:
                 ref_offset = self._get_reference_offset(type_attr, cu)
@@ -1136,7 +1136,7 @@ class ElfDataDictionary:
 
             offset = 0
             if location:
-                # Extrair offset da localização
+                # Extrair offset da localizacao
                 if isinstance(location.value, list) and len(location.value) > 1:
                     # Formato DW_OP_plus_uconst
                     offset = location.value[1]
@@ -1159,30 +1159,30 @@ class ElfDataDictionary:
 
         var_name = name_attr.value.decode("utf-8")
 
-        # Obter endereço da localização se disponível
+        # Obter endereco da localizacao se disponivel
         address = 0
         if location_attr:
             address = self._extract_address(location_attr.value)
             if address is None:
-                # Se não conseguirmos extrair o endereço, tentar usar um padrão ou pular
+                # Se nao conseguirmos extrair o endereco, tentar usar um padrao ou pular
                 # Algumas variaveis podem estar otimizadas ou em registradores
                 logger.warning(
-                    f"Não foi possível extrair endereço para variavel '{var_name}'"
+                    f"Nao foi possivel extrair endereco para variavel '{var_name}'"
                 )
-                # Por enquanto, ainda vamos adiciona-la com endereço 0
+                # Por enquanto, ainda vamos adiciona-la com endereco 0
                 address = 0
         else:
-            # Variavel sem localização - pode ser externa, const ou otimizada
-            # Verificar se é externa
+            # Variavel sem localizacao - pode ser externa, const ou otimizada
+            # Verificar se e externa
             if "DW_AT_external" in die.attributes:
-                logger.debug(f"Variavel '{var_name}' é externa (global)")
-                # Variaveis externas devem ter endereços, mas podem precisar de linking
+                logger.debug(f"Variavel '{var_name}' e externa (global)")
+                # Variaveis externas devem ter enderecos, mas podem precisar de linking
                 address = 0  # Sera resolvido no tempo de link
             else:
                 logger.debug(
-                    f"Variavel '{var_name}' não tem localização (pode estar otimizada)"
+                    f"Variavel '{var_name}' nao tem localizacao (pode estar otimizada)"
                 )
-                # Ainda adicionar com endereço 0 para completude
+                # Ainda adicionar com endereco 0 para completude
                 address = 0
 
         # Obter informacoes de tipo
@@ -1258,64 +1258,64 @@ class ElfDataDictionary:
             self._variables[member_name] = member_info
 
     def _get_reference_offset(self, attr, cu) -> int:
-        """Obter o offset absoluto para um atributo de referência."""
+        """Obter o offset absoluto para um atributo de referencia."""
         offset = attr.value
         if attr.form == "DW_FORM_ref4":
-            # Offset relativo à CU
+            # Offset relativo a CU
             offset += cu.cu_offset
         return offset
 
     def _get_die_at_offset(self, cu, offset: int) -> Optional[DIE]:
-        """Obter um DIE em um offset específico dentro de uma CU."""
+        """Obter um DIE em um offset especifico dentro de uma CU."""
         try:
             return cu._get_cached_DIE(offset)
         except:
             return None
 
     def _extract_address(self, location_value) -> Optional[int]:
-        """Extrair endereço de expressão de localização DWARF."""
+        """Extrair endereco de expressao de localizacao DWARF."""
         if isinstance(location_value, list):
             if len(location_value) == 0:
                 return None
 
-            # Verificar DW_OP_addr (0x03) - endereço direto
+            # Verificar DW_OP_addr (0x03) - endereco direto
             if location_value[0] == 0x03 and len(location_value) >= 3:
-                # Endereço segue o opcode (16-bit para AVR)
+                # Endereco segue o opcode (16-bit para AVR)
                 return int.from_bytes(bytes(location_value[1:3]), "little")
 
-            # Verificar outras expressões de localização comuns
-            # DW_OP_fbreg - relativo à base do frame (variaveis locais)
+            # Verificar outras expressoes de localizacao comuns
+            # DW_OP_fbreg - relativo a base do frame (variaveis locais)
             if location_value[0] == 0x91:
-                # Esta é uma variavel relativa à pilha, não podemos obter endereço absoluto
+                # Esta e uma variavel relativa a pilha, nao podemos obter endereco absoluto
                 return None
 
-            # Tentar extrair dos últimos 2 bytes (comportamento legado)
+            # Tentar extrair dos ultimos 2 bytes (comportamento legado)
             if len(location_value) >= 2:
-                # Alguns compiladores colocam o endereço diretamente sem opcode
+                # Alguns compiladores colocam o endereco diretamente sem opcode
                 return int.from_bytes(bytes(location_value[-2:]), "little")
 
         elif isinstance(location_value, int):
-            # Valor de endereço direto
+            # Valor de endereco direto
             return location_value
 
         return None
 
-    # Métodos da API pública
+    # Metodos da API publica
 
     def list_variables(self, pattern: Optional[str] = None) -> List[str]:
         """
-        Listar todos os nomes de variaveis, opcionalmente filtrados por padrão.
+        Listar todos os nomes de variaveis, opcionalmente filtrados por padrao.
 
         Args:
-            pattern: Padrão glob opcional para filtrar nomes de variaveis (ex: "dig*pin*pgm")
+            pattern: Padrao glob opcional para filtrar nomes de variaveis (ex: "dig*pin*pgm")
 
         Returns:
-            Lista de nomes de variaveis correspondentes ao padrão
+            Lista de nomes de variaveis correspondentes ao padrao
         """
         names = list(self._variables.keys())
 
         if pattern:
-            # Converter padrão glob para correspondência case-insensitive
+            # Converter padrao glob para correspondencia case-insensitive
             import fnmatch
 
             pattern_lower = pattern.lower()
@@ -1330,10 +1330,10 @@ class ElfDataDictionary:
         Obter informacoes de variavel por nome.
 
         Args:
-            name: Nome da variavel (pode incluir índices de array ou membros de struct)
+            name: Nome da variavel (pode incluir indices de array ou membros de struct)
 
         Returns:
-            Tupla de (endereço, tamanho, tipo) ou None se não encontrado
+            Tupla de (endereco, tamanho, tipo) ou None se nao encontrado
         """
         var_info = self._variables.get(name)
         if var_info:
@@ -1348,7 +1348,7 @@ class ElfDataDictionary:
             name: Nome da variavel
 
         Returns:
-            Objeto VariableInfo ou None se não encontrado
+            Objeto VariableInfo ou None se nao encontrado
         """
         return self._variables.get(name)
 
@@ -1360,20 +1360,20 @@ class ElfDataDictionary:
         var_type: Optional[str] = None,
     ) -> List[VariableInfo]:
         """
-        Buscar variaveis com múltiplos filtros.
+        Buscar variaveis com multiplos filtros.
 
         Args:
-            pattern: Padrão glob para correspondência de nome
-            min_size: Tamanho mínimo da variavel em bytes
+            pattern: Padrao glob para correspondencia de nome
+            min_size: Tamanho minimo da variavel em bytes
             max_size: Tamanho maximo da variavel em bytes
             var_type: Filtrar por tipo (ex: 'uint8', 'float', 'struct')
 
         Returns:
-            Lista de objetos VariableInfo correspondentes a todos os critérios
+            Lista de objetos VariableInfo correspondentes a todos os criterios
         """
         results = []
 
-        # Primeiro filtrar por padrão de nome
+        # Primeiro filtrar por padrao de nome
         matching_names = self.list_variables(pattern)
 
         for name in matching_names:
