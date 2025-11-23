@@ -24,7 +24,8 @@ Para que os comandos sejam transmitidos entre um host, aplicativo manipulado por
 
 O protocolo foi projetado para ser mínimo e determinístico, a fim de reduzir o \textit{overhead} de comunicação e facilitar implementações em ambientes de recursos restritos. Cada pacote é composto por:
 
-\begin{table}[H]
+\FloatBarrier
+\begin{table}[htbp]
     \centering
     \begin{tabular}{|l|c|l|}
     \hline
@@ -132,7 +133,8 @@ Por meio da Figura \ref{fig:destra_diagrama_estados}, é possível observar o co
 determinístico da máquina de estados, onde cada estado aguarda um byte específico para 
 avançar à etapa subsequente.
 
-\begin{figure}[H]
+\FloatBarrier
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.9\textwidth]{recursos/figuras/destra_diagrama_estados.png}
     \caption{Diagrama de estados para a implementação do protocolo DESTRA}
@@ -196,7 +198,8 @@ Funcao destraHandler():
 
 A Tabela \ref{tab:fsm_vars} apresenta as variáveis utilizadas na implementação da máquina de estados:
 
-\begin{table}[H]
+\FloatBarrier
+\begin{table}[htbp]
     \centering
     \begin{tabular}{|l|l|}
     \hline
@@ -260,7 +263,8 @@ envolvidas na execução de um comando peek, desde o envio da requisição pela 
 host até o retorno da resposta pelo sistema embarcado, detalhando as etapas de 
 processamento intermediárias.
 
-\begin{figure}[H]
+\FloatBarrier
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.9\textwidth]{recursos/figuras/destra_diagrama_sequencia_peek.png}
     \caption{Diagrama de sequencia de um comando peek a partir da ferramenta host}
@@ -308,7 +312,8 @@ Funcao processPokeRequest():
 A Figura \ref{fig:destra_diagrama_sequencia_poke} apresenta o diagrama de sequência das operações envolvidas na execução de um comando poke, desde o envio da requisição pela ferramenta host até o retorno da resposta pelo sistema embarcado, detalhando as etapas de 
 validação, escrita em memória e confirmação.
 
-\begin{figure}[H]
+\FloatBarrier
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.9\textwidth]{recursos/figuras/destra_diagrama_sequencia_poke.png}
     \caption{Diagrama de sequencia de um comando poke a partir da ferramenta host}
@@ -336,7 +341,8 @@ tratamento e execução no microcontrolador, e (d) a retransmissão e decodifica
 dados na ferramenta host. Esta estrutura hierarquizada garante a rastreabilidade 
 completa da operação e facilita a validação e verificação do protocolo.
 
-\begin{figure}[H]
+\FloatBarrier
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\textwidth]{recursos/figuras/destra_diagrama_sequencia_ferramenta_host.png}
     \caption{Diagrama de sequência da operação peek. O fluxo ilustra as interações 
@@ -380,7 +386,8 @@ Para realizar a operação de um comando peek, são necessários os seguintes pa
 
 A Figura \ref{fig:destra_ferramenta_host} apresenta a interface gráfica da ferramenta DESTRA UI, evidenciando os principais componentes: o painel de seleção de porta serial, o carregador de arquivo ELF/DWARF, a lista de variáveis disponíveis e a tabela de monitoramento onde é possível realizar operações de peek e poke de forma intuitiva.
 
-\begin{figure}[H]
+\FloatBarrier
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.95\textwidth]{recursos/figuras/destra_ferramenta_host.png}
     \caption{Interface gráfica da ferramenta DESTRA UI. A tela apresenta os elementos 
@@ -392,11 +399,11 @@ A Figura \ref{fig:destra_ferramenta_host} apresenta a interface gráfica da ferr
 
 \subsection{Formatos ELF e DWARF}
 
-O formato \textbf{Executable and Linkable Format} (ELF) é um padrão amplamente utilizado em sistemas Unix e em arquiteturas embarcadas para representar executáveis, bibliotecas compartilhadas e arquivos objeto. Desenvolvido inicialmente pela Unix System Laboratories e posteriormente adotado pelo projeto System V Release 4 \cite{tis1995elf, sco1997abi}, o ELF tornou-se o formato predominante devido à sua portabilidade e flexibilidade.
+O formato \textbf{Executable and Linkable Format} (ELF) é um padrão amplamente utilizado em sistemas Unix e em arquiteturas embarcadas para representar executáveis, bibliotecas compartilhadas e arquivos objeto. Desenvolvido inicialmente pela Unix System Laboratories e posteriormente adotado pelo projeto System V Release 4 \cite{tis1995elf}, o ELF tornou-se o formato predominante devido à sua portabilidade e flexibilidade.
 
 Estruturalmente, um arquivo ELF organiza-se em seções e segmentos. As seções contêm informações como código executável, dados estáticos e tabelas de símbolos, enquanto os segmentos representam as partes efetivamente carregadas em memória durante a execução. Essa separação permite que o ELF seja utilizado tanto no processo de compilação e linkagem quanto em tempo de execução.
 
-Complementarmente, o \textbf{Debugging With Attributed Record Formats} (DWARF) é um padrão de descrição de informações de depuração que pode ser incorporado em arquivos ELF \cite{dwarf2017standard, eager2012dwarf}. Trata-se de um formato independente da arquitetura e da linguagem de programação, projetado para prover uma representação detalhada da estrutura interna do programa. O DWARF descreve elementos como tipos de dados, variáveis globais, estruturas, classes, funções, escopos léxicos e até mapeamentos entre instruções de máquina e linhas do código-fonte.
+Complementarmente, o \textbf{Debugging With Attributed Record Formats} (DWARF) é um padrão de descrição de informações de depuração que pode ser incorporado em arquivos ELF \cite{dwarf2017standard}. Trata-se de um formato independente da arquitetura e da linguagem de programação, projetado para prover uma representação detalhada da estrutura interna do programa. O DWARF descreve elementos como tipos de dados, variáveis globais, estruturas, classes, funções, escopos léxicos e até mapeamentos entre instruções de máquina e linhas do código-fonte.
 
 Essas informações são fundamentais para ferramentas de depuração, como debuggers (por exemplo, GDB), que dependem de uma correlação precisa entre o código binário executável e sua representação em alto nível.
 
@@ -406,7 +413,8 @@ Portanto, ELF e DWARF podem ser compreendidos como elementos centrais da infraes
 
 A Figura \ref{fig:destra_diagrama_sequencia_parser_elf} descreve a sequência do fluxo de carregamento do dicionário de dados na aplicação ferramenta host.
 
-\begin{figure}[H]
+\FloatBarrier
+\begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\textwidth]{recursos/figuras/destra_diagrama_sequencia_parser_elf.png}
     \caption{Diagrama de sequência da operação de leitura do arquivo ELF/DWARF.}

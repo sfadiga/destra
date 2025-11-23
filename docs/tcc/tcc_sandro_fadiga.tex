@@ -54,7 +54,7 @@ french,				% idioma adicional para hifenização
 spanish,			% idioma adicional para hifenização
 brazil				% o último idioma é o principal do documento
 % {USPSC-classe/USPSC} configura o cabeçalho contendo apenas o número da página
-]{USPSC/USPSC-classe/USPSC}
+]{./USPSC/USPSC-classe/USPSC}
 %]{USPSC/USPSC-classe/USPSC1}
 % Inclua % antes de ]{USPSC-classe/USPSC} e retire a % antes de %]{USPSC-classe/USPSC1} para utilizar o 
 % cabeçalho diferenciado para as páginas pares e ímpares:
@@ -97,7 +97,7 @@ brazil				% o último idioma é o principal do documento
 % Sistemas de chamada: autor-data ou numérico.
 % Sistema autor-data
 \usepackage[alf, abnt-emphasize=bf, abnt-thesis-year=both, abnt-repeated-author-omit=no, abnt-last-names=abnt, abnt-etal-cite=3, abnt-etal-list=3, abnt-etal-text=it, abnt-and-type=e, abnt-doi=doi, abnt-url-package=none, abnt-verbatim-entry=no]{abntex2cite}
-\bibliographystyle{USPSC/USPSC-classe/abntex2-alf-USPSC}
+\bibliographystyle{./USPSC/USPSC-classe/abntex2-alf-USPSC}
 % Se o idioma for o inglês, inclua % no comando acima e exclua o % do comando abaixo
 %\bibliographystyle{USPSC-classe/abntex2-alfeng-USPSC}
 
@@ -158,7 +158,7 @@ brazil				% o último idioma é o principal do documento
 % ----
 % Compatibilização com a ABNT NBR 6023:2018 e 10520:2023
 % Para tirar <> da URL e tornar as expressões latinas em itálico
-\usepackage{USPSC/USPSC-classe/ABNT6023-10520}
+\usepackage{./USPSC/USPSC-classe/ABNT6023-10520}
 % As demais compatibilizações estão nos arquivos abntex2-alf-USPSC.bst,abntex2-alfeng-USPSC.bst, abntex2-num-USPSC.bst e abntex2-numeng-USPSC.bst, dependendo do idioma do textos e se o sistemas de chamada for autor-data ou numérico, conforme explicitado acima.
 % ----
 
@@ -180,8 +180,7 @@ brazil				% o último idioma é o principal do documento
 % ------------------------------------------------------------------------
 % Informações de capa e folha de rosto
 % ------------------------------------------------------------------------
-\titulo{Depuração de Sistemas em Tempo Real: Uma Abordagem de
-Instrumentação de Código para Testes de Sistemas Críticos.}
+\titulo{Depuração de Sistemas em Tempo Real: Uma Abordagem de Instrumentação de Código para Testes de Sistemas Críticos.}
 \autor{Sandro Fadiga}
 \local{São Carlos}
 \data{2025}
@@ -469,7 +468,7 @@ Orientador: Prof. Dr. Glauco Augusto de Paula Caurin
 %---------------------------------------------------------------------
 % INDICE REMISSIVO
 %--------------------------------------------------------------------
-\include{USPSC/USPSC-TA-PosTextual/USPSC-IndicesRemissivos}
+\include{./USPSC/USPSC-TA-PosTextual/USPSC-IndicesRemissivos}
 
 %---------------------------------------------------------------------
 

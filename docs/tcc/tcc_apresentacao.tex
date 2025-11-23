@@ -1,0 +1,146 @@
+\documentclass{beamer}
+
+% Tema recomendado
+\usetheme{Metropolis}
+\usecolortheme{default}
+
+% Pacotes básicos
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+
+% Informações da apresentação
+\title[DESTRA]{Depuração de Sistemas em Tempo Real: Uma Abordagem de Instrumentação de Código para Testes de Sistemas Críticos.}
+\author{Sandro Fadiga}
+\institute{Escola de Engenharia de São Carlos Universidade de São Paulo - USP}
+\date{2025}
+
+\begin{document}
+
+% --------------------------------------------------------------
+\begin{frame}
+    \titlepage
+\end{frame}
+
+% --------------------------------------------------------------
+\begin{frame}{Agenda}
+    \tableofcontents
+\end{frame}
+
+% --------------------------------------------------------------
+\section{Introdução}
+
+\begin{frame}{Contexto do Problema}
+    \begin{itemize}
+        \item Crescente complexidade de sistemas embarcados aeronáuticos.
+        \item Dificuldade de depuração em ambientes finais (Iron Bird, HIL).
+        \item Limitações de técnicas invasivas (breakpoints, JTAG).
+    \end{itemize}
+\end{frame}
+
+% --------------------------------------------------------------
+\section{Objetivos}
+
+\begin{frame}{Objetivo Geral}
+    Desenvolver um protocolo de depuração não invasivo baseado em Peek/Poke
+    para execução determinística de testes de integração em sistemas embarcados.
+\end{frame}
+
+\begin{frame}{Objetivos Específicos}
+    \begin{itemize}
+        \item Criar protocolo seguro e estruturado para comandos remotos.
+        \item Implementar ferramenta host multiplataforma.
+        \item Validar a solução em cenários reais (HIL-like).
+        \item Garantir rastreabilidade e reprodutibilidade dos testes.
+    \end{itemize}
+\end{frame}
+
+% --------------------------------------------------------------
+\section{Fundamentação}
+
+\begin{frame}{Debugging em Sistemas Embarcados}
+    \begin{itemize}
+        \item Técnicas tradicionais (JTAG, SWD) são invasivas.
+        \item Falta de acesso interno em ambientes certificados.
+        \item Peek/Poke como mecanismo universal de instrumentação.
+    \end{itemize}
+\end{frame}
+
+% --------------------------------------------------------------
+\section{Protocolo DESTRA}
+
+\begin{frame}{Arquitetura da Solução}
+    \begin{figure}
+        \includegraphics[width=0.8\linewidth]{figuras/arquitetura.png}
+    \end{figure}
+\end{frame}
+
+\begin{frame}{Formato dos Pacotes}
+    \begin{itemize}
+        \item Pacotes request/response
+        \item Framing explícito
+        \item CRC-16 para integridade
+        \item Identificação de sequência
+    \end{itemize}
+\end{frame}
+
+% --------------------------------------------------------------
+\section{Resultados}
+
+\begin{frame}{Testes de Estresse}
+    \begin{itemize}
+        \item Zero erros em 60 segundos contínuos.
+        \item Frame rate estável.
+        \item Nenhum gap de sequência.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Tabela Resumo}
+    \begin{table}
+        \centering
+        \begin{tabular}{lll}
+            \toprule
+            Aspecto & Resultado \\
+            \midrule
+            Latência média & 6.63 ms \\
+            Jitter médio & 0.23 ms \\
+            Frames/s & 99 fps \\
+            \bottomrule
+        \end{tabular}
+    \end{table}
+\end{frame}
+
+% --------------------------------------------------------------
+\section{Conclusões}
+
+\begin{frame}{Conclusões}
+    \begin{itemize}
+        \item Protocolo funciona de forma determinística.
+        \item Reutilização de testes em múltiplos ambientes.
+        \item Baixa intrusão → ideal para ambientes aeronáuticos.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Trabalhos Futuros}
+    \begin{itemize}
+        \item Adaptação para protocolos industriais (CAN, Ethernet).
+        \item Versão com criptografia.
+        \item Integração com testbeds HIL de alta fidelidade.
+    \end{itemize}
+\end{frame}
+
+% --------------------------------------------------------------
+\begin{frame}{Código-Fonte}
+    Disponível em: \\
+    \url{https://github.com/sfadiga/destra}
+\end{frame}
+
+% --------------------------------------------------------------
+\begin{frame}
+    \centering
+    \Huge Obrigado!
+\end{frame}
+
+\end{document}
