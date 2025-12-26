@@ -1,4 +1,5 @@
-\documentclass{beamer}
+\documentclass[10pt,aspectratio=169]{beamer} % 16:9, mais moderno
+
 
 % Tema recomendado
 \usetheme{Metropolis}
@@ -11,136 +12,252 @@
 \usepackage{hyperref}
 \usepackage{booktabs}
 
-% Informações da apresentação
-\title[DESTRA]{Depuração de Sistemas em Tempo Real: Uma Abordagem de Instrumentação de Código para Testes de Sistemas Críticos.}
-\author{Sandro Fadiga}
-\institute{Escola de Engenharia de São Carlos Universidade de São Paulo - USP}
+
+% Configurações pessoais
+\title{Depuração de Sistemas em Tempo Real:}
+\subtitle{Uma Abordagem de Instrumentação de Código para Testes de Sistemas Críticos}
+\author{Sandro Fadiga\\[0.2cm]Orientador: Prof. Dr. Glauco Augusto de Paula Caurin}
 \date{2025}
+\institute{Escola de Engenharia de São Carlos Universidade de São Paulo - USP}
+
+% Cores personalizadas (opcional)
+%\definecolor{azuluno}{RGB}{0,51,102}
+%\setbeamercolor{title}{fg=azuluno}
+%\setbeamercolor{frametitle}{fg=azuluno}
+%\setbeamercolor{structure}{fg=azuluno}
 
 \begin{document}
 
-% --------------------------------------------------------------
+% Slide 1 - Capa
 \begin{frame}
     \titlepage
 \end{frame}
 
-% --------------------------------------------------------------
-\begin{frame}{Agenda}
-    \tableofcontents
-\end{frame}
+% Slide 2 - Sumário da apresentação
+%\begin{frame}{Sumário da Apresentação}
+%    \tableofcontents
+%\end{frame}
 
-% --------------------------------------------------------------
-\section{Introdução}
-
-\begin{frame}{Contexto do Problema}
+\section{1. Introdução}
+\begin{frame}{Introdução}
     \begin{itemize}
-        \item Crescente complexidade de sistemas embarcados aeronáuticos.
-        \item Dificuldade de depuração em ambientes finais (Iron Bird, HIL).
-        \item Limitações de técnicas invasivas (breakpoints, JTAG).
+        \item Contextualização
+        \item Objetivos
+        \item Justificativa
+        \item Desenvolvimento
+        \item Testes e Resultados
+        \item Conclusão
     \end{itemize}
 \end{frame}
 
-% --------------------------------------------------------------
-\section{Objetivos}
-
-\begin{frame}{Objetivo Geral}
-    Desenvolver um protocolo de depuração não invasivo baseado em Peek/Poke
-    para execução determinística de testes de integração em sistemas embarcados.
-\end{frame}
-
-\begin{frame}{Objetivos Específicos}
-    \begin{itemize}
-        \item Criar protocolo seguro e estruturado para comandos remotos.
-        \item Implementar ferramenta host multiplataforma.
-        \item Validar a solução em cenários reais (HIL-like).
-        \item Garantir rastreabilidade e reprodutibilidade dos testes.
-    \end{itemize}
-\end{frame}
-
-% --------------------------------------------------------------
-\section{Fundamentação}
-
-\begin{frame}{Debugging em Sistemas Embarcados}
-    \begin{itemize}
-        \item Técnicas tradicionais (JTAG, SWD) são invasivas.
-        \item Falta de acesso interno em ambientes certificados.
-        \item Peek/Poke como mecanismo universal de instrumentação.
-    \end{itemize}
-\end{frame}
-
-% --------------------------------------------------------------
-\section{Protocolo DESTRA}
-
-\begin{frame}{Arquitetura da Solução}
-    \begin{figure}
-        \includegraphics[width=0.8\linewidth]{figuras/arquitetura.png}
-    \end{figure}
-\end{frame}
-
-\begin{frame}{Formato dos Pacotes}
-    \begin{itemize}
-        \item Pacotes request/response
-        \item Framing explícito
-        \item CRC-16 para integridade
-        \item Identificação de sequência
-    \end{itemize}
-\end{frame}
-
-% --------------------------------------------------------------
-\section{Resultados}
-
-\begin{frame}{Testes de Estresse}
-    \begin{itemize}
-        \item Zero erros em 60 segundos contínuos.
-        \item Frame rate estável.
-        \item Nenhum gap de sequência.
-    \end{itemize}
-\end{frame}
-
-\begin{frame}{Tabela Resumo}
-    \begin{table}
-        \centering
-        \begin{tabular}{lll}
-            \toprule
-            Aspecto & Resultado \\
-            \midrule
-            Latência média & 6.63 ms \\
-            Jitter médio & 0.23 ms \\
-            Frames/s & 99 fps \\
-            \bottomrule
-        \end{tabular}
-    \end{table}
-\end{frame}
-
-% --------------------------------------------------------------
-\section{Conclusões}
-
-\begin{frame}{Conclusões}
-    \begin{itemize}
-        \item Protocolo funciona de forma determinística.
-        \item Reutilização de testes em múltiplos ambientes.
-        \item Baixa intrusão → ideal para ambientes aeronáuticos.
-    \end{itemize}
-\end{frame}
-
-\begin{frame}{Trabalhos Futuros}
-    \begin{itemize}
-        \item Adaptação para protocolos industriais (CAN, Ethernet).
-        \item Versão com criptografia.
-        \item Integração com testbeds HIL de alta fidelidade.
-    \end{itemize}
-\end{frame}
-
-% --------------------------------------------------------------
-\begin{frame}{Código-Fonte}
-    Disponível em: \\
-    \url{https://github.com/sfadiga/destra}
-\end{frame}
-
-% --------------------------------------------------------------
-\begin{frame}
+\section{2. Fundamentação Teórica}
+\begin{frame}{2.1 Contextualização}
+\begin{figure}[htbp]
     \centering
-    \Huge Obrigado!
+    \includegraphics[height=0.8\textheight]{recursos/figuras/iron_bird.png}
+    \caption{Foto de um típico ambiente de ensaios integrados (Iron Bird).}
+\end{figure}    
+\end{frame}
+
+\begin{frame}{2.2 Objetivos}
+    \begin{block}{Objetivo Geral}
+        \vspace{0.3cm}
+        Desenvolver e validar um protocolo leve de depuração (peek/poke/telemetria) para sistemas embarcados críticos com mínima intrusão temporal.
+    \end{block}
+    \begin{block}{Objetivos Específicos}
+        \begin{itemize}
+            \item Especificar protocolo binário eficiente
+            \item Implementar no microcontrolador e host
+            \item Avaliar impacto temporal em diferentes taxas
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+\begin{frame}{2.3 Justificativa}
+    \begin{columns}
+        \column{0.5\textwidth}
+            \textbf{Tópicos abordados:}
+            \begin{itemize}
+                \item Software embarcado crítico
+                \item Tempo real e determinismo
+                \item Setores de alta criticidade
+                \item Testes e certificação (DO-178C, ISO 26262, IEC 61508/62304)
+            \end{itemize}
+        \column{0.5\textwidth}
+    \end{columns}
+\end{frame}
+
+\section{3 Desenvolvimento}
+\begin{frame}{3.1 Protocolo}
+    \begin{itemize}
+        \item Arquitetura do Sistema
+        \item Especificação do protocolo
+        \item Máquina de Estados
+        \item Cliente Host – Desenvolvimento
+        \item Considerações de extensibilidade
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{3.2 Arquitetura do Sistema}
+    \centering
+    \includegraphics[width=0.9\textwidth]{recursos/figuras/arquitetura_sistema.png}
+\end{frame}
+
+\begin{frame}[fragile]{3.2 Especificação do protocolo}
+    Examplo do Comando Peek:
+    \begin{center}
+        \texttt{CA FE F1 04 01 02}
+    \end{center}
+    Decomposição:
+    \begin{itemize}
+        \item \texttt{CA FE}: Palavras mágicas
+        \item \texttt{F1}: Comando PEEK
+        \item \texttt{04}: Byte baixo do endereço (LSB)
+        \item \texttt{01}: Byte alto do endereço (MSB)
+        \item \texttt{02}: Tamanho (2 bytes)
+    \end{itemize}
+    \vspace{0.5cm}
+    Nota: o endereço \texttt{0x0104} é transmitido como \texttt{04 01} (little-endian).
+\end{frame}
+
+\begin{frame}{3.3 Máquina de Estados}
+    \centering
+    \includegraphics[width=0.65\textheight]{recursos/figuras/destra_diagrama_estados.png}
+\end{frame}
+
+\begin{frame}{3.4 Cliente Host – Desenvolvimento}
+    \begin{itemize}
+        \item Ferramenta escrita em Python/Qt
+        \item Usa \texttt{pyelftools} ou \texttt{libdwarf}
+        \item Resolve símbolos automaticamente a partir do arquivo elf/dwarf
+        \item Comandos simples: \texttt{peek 'variavel'}, \texttt{poke 'variavel' = 42}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{3.5 Considerações de extensibilidade}
+    \begin{itemize}
+        \item Checagem de erros
+        \item Monitoramento/telemetria contínua
+        \item Extensão do protocolo (novos comandos)
+        \item Segurança (prevenção do uso indesejado)
+        \item Uso em ensaios em vôo
+    \end{itemize}
+\end{frame}
+
+\section{4. Testes e Resultados}
+\begin{frame}{4.1 Metodologia e Testes}
+    \begin{columns}
+        \column{0.5\textwidth}
+            \textbf{Hardware}
+            \begin{itemize}
+                \item Plataforma: Arduino UNO e "frame locking"
+                \item Instrumentação de código ferramenta Host
+                \item Instrumentação de código embarcado
+                \item Osciloscópio FNIRSI DSO-153
+            \end{itemize}
+        \column{0.5\textwidth}
+            \textbf{Cenários testados}
+            \begin{itemize}
+                \item Teste de Latência
+                \item Teste de estresse
+                \item Teste de Rajada (burst)
+                \item Telemetria contínua a 10 Hz, 100 Hz e 1 kHz
+            \end{itemize}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{4.2 Resultados – Teste de Latência}
+    \centering
+    \includegraphics[height=0.9\textheight]{recursos/figuras/teste_latencia_grafico.png}
+
+\end{frame}
+
+\begin{frame}{4.3 Resultados – Teste de estresse}
+    \centering
+    \includegraphics[height=0.9\textheight]{recursos/figuras/teste_estresse_grafico.png}
+\end{frame}
+
+\begin{frame}{4.4  Teste de Rajada (burst)}
+    \centering
+    \includegraphics[height=0.9\textheight]{recursos/figuras/teste_rajada_grafico.png}
+\end{frame}
+
+\begin{frame}{4.5 Telemetria contínua a 10 Hz, 100 Hz e 1 kHz}
+\FloatBarrier
+\begin{table}[htbp]
+\centering
+\caption{Síntese dos resultados dos testes com osciloscópio}
+\label{tab:sintese_cenario2}
+\begin{tabular}{|p{5cm}|p{2.5cm}|p{2.5cm}|p{2.5cm}|}
+\hline
+\textbf{Métrica} & \textbf{10 Hz} & \textbf{100 Hz} & \textbf{1 kHz} \\
+\hline
+\multicolumn{4}{|l|}{\textbf{Frequência de detecção dos pulsos de comando (PIN\_BUSY)}} \\
+\hline 
+Frequência Medida & 14.81 Hz & 99.13 Hz & 99.13 Hz \\
+\hline
+Período & 43.34 ms & 10.09 ms & 10.09 ms \\
+\hline
+Largura Pulso & 720 µs & 732 µs & 730 µs \\
+\hline
+Duty Cycle & 1.76\% & 7.26\% & 7.24\% \\
+\hline
+\multicolumn{4}{|l|}{\textbf{Medição de frame rate}} \\
+\hline
+Frequência & 49.55 Hz & 49.55 Hz & 49.70 Hz \\
+\hline
+Período Total & 20.18 ms & 20.18 ms & 20.12 ms \\
+\hline
+Período Loop & 10.09 ms & 10.09 ms & 10.06 ms \\
+\hline
+Duty Cycle & 50.02\% & 50.00\% & 50.00\% \\
+\hline
+Jitter perceptível no loop & Não observado & Não observado & Não observado \\
+\hline
+\end{tabular}
+\end{table}
+
+\end{frame}
+
+\section{5. Conclusão}
+\begin{frame}{5.1 Conclusão}
+    \begin{block}{Objetivos atingidos}
+        \vspace{0.5cm}
+        \checkmark Protocolo leve especificado e implementado \\
+        \checkmark Funciona em hardware real (Arduino UNO) \\
+        \checkmark Overhead temporal quantificado e baixo até 100 Hz \\
+        \checkmark Ferramenta host com protocolo funcional 
+    \end{block}
+\end{frame}
+
+\begin{frame}{5.2 Limitações Observadas}
+    \begin{itemize}
+        \item Ausência de monitoramento/telemetria contínua
+        \item Sem mecanismos de integridade
+        \item Sem travas de segurança ou validação de dados
+        \item Dependência de UART (taxa máxima 115200 bps)
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{5.3 Trabalhos Futuros}
+    \begin{itemize}
+        \item Portar para RTOS utilizando MCU com maior capacidade
+        \item Adicionar monitramento/telemetria contínua
+        \item Implementar CRC32 + ACK/NACK
+        \item Introduzir uma camada de abstração de hardware
+        \item Suporte a múltiplos alvos simultâneos (ferramenta host)
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Fim}
+    \centering
+    \huge Obrigado \\
+    \vspace{1cm}
+    \LARGE Perguntas?
+    \vfill
+    \small
+    Código-Fonte disponível em: \\
+    \url{https://github.com/sfadiga/destra}
 \end{frame}
 
 \end{document}
