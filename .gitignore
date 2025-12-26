@@ -221,3 +221,9 @@ __marimo__/
 *.fdb_latexmk
 *.lof
 *.lot
+*.nav
+*.out
+*.snm
+*.vrb
+
+

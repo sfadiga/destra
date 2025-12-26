@@ -62,7 +62,7 @@
 \begin{frame}{2.2 Objetivos}
     \begin{block}{Objetivo Geral}
         \vspace{0.3cm}
-        Desenvolver e validar um protocolo leve de depuração (peek/poke/telemetria) para sistemas embarcados críticos com mínima intrusão temporal.
+        Desenvolver e validar um protocolo simples de depuração (peek/poke/telemetria) para sistemas embarcados críticos com mínima intrusão temporal.
     \end{block}
     \begin{block}{Objetivos Específicos}
         \begin{itemize}
@@ -78,10 +78,10 @@
         \column{0.5\textwidth}
             \textbf{Tópicos abordados:}
             \begin{itemize}
-                \item Software embarcado crítico
                 \item Tempo real e determinismo
+                \item Software embarcado, Software crítico
                 \item Setores de alta criticidade
-                \item Testes e certificação (DO-178C, ISO 26262, IEC 61508/62304)
+                \item Testes e certificação
             \end{itemize}
         \column{0.5\textwidth}
     \end{columns}
@@ -90,10 +90,10 @@
 \section{3 Desenvolvimento}
 \begin{frame}{3.1 Protocolo}
     \begin{itemize}
-        \item Arquitetura do Sistema
-        \item Especificação do protocolo
-        \item Máquina de Estados
-        \item Cliente Host – Desenvolvimento
+        \item Caraterísticas desejáveis
+        \item Meios de transmissão
+        \item "Stateful" vs "Stateless"
+        \item Telemetria, Sincronização
         \item Considerações de extensibilidade
     \end{itemize}
 \end{frame}
@@ -103,7 +103,7 @@
     \includegraphics[width=0.9\textwidth]{recursos/figuras/arquitetura_sistema.png}
 \end{frame}
 
-\begin{frame}[fragile]{3.2 Especificação do protocolo}
+\begin{frame}[fragile]{3.3 Especificação do comando peek}
     Examplo do Comando Peek:
     \begin{center}
         \texttt{CA FE F1 04 01 02}
@@ -120,21 +120,22 @@
     Nota: o endereço \texttt{0x0104} é transmitido como \texttt{04 01} (little-endian).
 \end{frame}
 
-\begin{frame}{3.3 Máquina de Estados}
+\begin{frame}{3.4 Máquina de Estados}
     \centering
     \includegraphics[width=0.65\textheight]{recursos/figuras/destra_diagrama_estados.png}
 \end{frame}
 
-\begin{frame}{3.4 Cliente Host – Desenvolvimento}
+\begin{frame}{3.5 Cliente Host – Desenvolvimento}
     \begin{itemize}
-        \item Ferramenta escrita em Python/Qt
-        \item Usa \texttt{pyelftools} ou \texttt{libdwarf}
-        \item Resolve símbolos automaticamente a partir do arquivo elf/dwarf
+        \item Ferramenta escrita em Python
+        \item Inteface gráfica escrita em PySide (Qt)
+        \item Escrita em poucas linhas de código (3 scripts .py)
+        \item Usa \texttt{pyelftools}, resolve símbolos automaticamente a partir do arquivo elf/dwarf
         \item Comandos simples: \texttt{peek 'variavel'}, \texttt{poke 'variavel' = 42}
     \end{itemize}
 \end{frame}
 
-\begin{frame}{3.5 Considerações de extensibilidade}
+\begin{frame}{3.6 Considerações de extensibilidade}
     \begin{itemize}
         \item Checagem de erros
         \item Monitoramento/telemetria contínua
@@ -150,49 +151,113 @@
         \column{0.5\textwidth}
             \textbf{Hardware}
             \begin{itemize}
-                \item Plataforma: Arduino UNO e "frame locking"
+                \item Plataforma: Arduino vs hard realtime
+                \item Cenários e limitações
                 \item Instrumentação de código ferramenta Host
-                \item Instrumentação de código embarcado
-                \item Osciloscópio FNIRSI DSO-153
+                \item Instrumentação de código embarcado + buffer interno
+                \item Instrumentação de código embarcado + Osciloscópio 
             \end{itemize}
         \column{0.5\textwidth}
             \textbf{Cenários testados}
             \begin{itemize}
-                \item Teste de Latência
-                \item Teste de estresse
-                \item Teste de Rajada (burst)
-                \item Telemetria contínua a 10 Hz, 100 Hz e 1 kHz
+                \item Cenário 1: Teste de Latência
+                \item Cenário 1: Teste de Estresse
+                \item Cenário 1: Teste de Rajada (burst)
+                \item Cenário 2: Teste com osciloscópio: a 10 Hz, 100 Hz e 1 kHz
             \end{itemize}
     \end{columns}
 \end{frame}
 
 \begin{frame}{4.2 Resultados – Teste de Latência}
     \centering
-    \includegraphics[height=0.9\textheight]{recursos/figuras/teste_latencia_grafico.png}
-
+    
+\FloatBarrier
+\begin{table}[htbp]
+    \begin{tabular}{|l|r|}
+    \hline
+    \textbf{Métrica (Firmware)} & \textbf{Valor} \\
+    \hline
+    Total de Amostras & 99 \\
+    \hline
+    Frame Jitter Médio (ms) & 0.0022 \\
+    \hline
+    Frame Jitter Mediana (ms) & 0.0000 \\
+    \hline
+    Desvio Padrão (ms) & 0.0035 \\
+    \hline
+    Tempo de Comando Médio (ms) & 0.732 \\
+    \hline
+    Gaps no Frame Counter & 0 \\
+    \hline
+    Gaps na Sequência de Comandos & 0 \\
+    \hline
+    \end{tabular}
+    \caption{Dados de performance embarcada (teste de latência)}
+    \label{tab:latencia_embarcada}
+\end{table}
 \end{frame}
 
-\begin{frame}{4.3 Resultados – Teste de estresse}
+\begin{frame}{4.3 Resultados – Teste de Estresse}
     \centering
-    \includegraphics[height=0.9\textheight]{recursos/figuras/teste_estresse_grafico.png}
+\FloatBarrier
+\begin{table}[htbp]
+    \begin{tabular}{|l|r|}
+    \hline
+    \textbf{Métrica (Firmware)} & \textbf{Valor} \\
+    \hline
+    Total de Medições & 5.905 \\
+    \hline
+    Taxa de Erro (\%) & 0.0 \\
+    \hline
+    Frame Jitter Médio (ms) & 0.0023 \\
+    \hline
+    Frame Rate (fps) & 99.0 \\
+    \hline
+    Comando Process Time Médio (ms) & 0.833 \\
+    \hline
+    Gaps de Frame Counter & 90 \\
+    \hline
+    Gaps de Command Sequence & 0 \\
+    \hline
+    \end{tabular}
+    \caption{Dados de performance embarcada (teste de estresse)}
+    \label{tab:estresse_embarcada}
+\end{table}
 \end{frame}
 
 \begin{frame}{4.4  Teste de Rajada (burst)}
-    \centering
-    \includegraphics[height=0.9\textheight]{recursos/figuras/teste_rajada_grafico.png}
-\end{frame}
-
-\begin{frame}{4.5 Telemetria contínua a 10 Hz, 100 Hz e 1 kHz}
 \FloatBarrier
 \begin{table}[htbp]
-\centering
-\caption{Síntese dos resultados dos testes com osciloscópio}
-\label{tab:sintese_cenario2}
+    \begin{tabular}{|l|r|}
+    \hline
+    \textbf{Métrica (Firmware)} & \textbf{Valor} \\
+    \hline
+    Total de Amostras & 99 \\
+    \hline
+    Frame Jitter Médio (ms) & 0.0021 \\
+    \hline
+    Frame Rate (fps) & 99.0 \\
+    \hline
+    Comando Process Time Médio (ms) & 2.089 \\
+    \hline
+    Gaps no Frame Counter & 0 \\
+    \hline
+    Gaps na Command Sequence & 0 \\
+    \hline
+    \end{tabular}
+    \caption{Dados de performance embarcada (teste de rajada)}
+    \label{tab:rajada_embarcada}
+\end{table}
+\end{frame}
+
+\begin{frame}{4.5 Teste com osciloscópio: a 10 Hz, 100 Hz e 1 kHz}
+\FloatBarrier
+\begin{table}[htbp]
 \begin{tabular}{|p{5cm}|p{2.5cm}|p{2.5cm}|p{2.5cm}|}
 \hline
 \textbf{Métrica} & \textbf{10 Hz} & \textbf{100 Hz} & \textbf{1 kHz} \\
 \hline
-\multicolumn{4}{|l|}{\textbf{Frequência de detecção dos pulsos de comando (PIN\_BUSY)}} \\
+\multicolumn{4}{|l|}{\textbf{Testes de Tempo de Comando (PIN\_BUSY)}} \\
 \hline 
 Frequência Medida & 14.81 Hz & 99.13 Hz & 99.13 Hz \\
 \hline
@@ -202,7 +267,7 @@ Largura Pulso & 720 µs & 732 µs & 730 µs \\
 \hline
 Duty Cycle & 1.76\% & 7.26\% & 7.24\% \\
 \hline
-\multicolumn{4}{|l|}{\textbf{Medição de frame rate}} \\
+\multicolumn{4}{|l|}{\textbf{Testes de Frame Rate (PIN\_FRAME\_TOGGLE)}} \\
 \hline
 Frequência & 49.55 Hz & 49.55 Hz & 49.70 Hz \\
 \hline
@@ -215,6 +280,8 @@ Duty Cycle & 50.02\% & 50.00\% & 50.00\% \\
 Jitter perceptível no loop & Não observado & Não observado & Não observado \\
 \hline
 \end{tabular}
+\caption{Síntese dos resultados dos testes com osciloscópio}
+\label{tab:sintese_cenario2}
 \end{table}
 
 \end{frame}
@@ -235,7 +302,7 @@ Jitter perceptível no loop & Não observado & Não observado & Não observado \
         \item Ausência de monitoramento/telemetria contínua
         \item Sem mecanismos de integridade
         \item Sem travas de segurança ou validação de dados
-        \item Dependência de UART (taxa máxima 115200 bps)
+        \item Implementação utilizando Serial (simples)
     \end{itemize}
 \end{frame}
 
@@ -243,9 +310,9 @@ Jitter perceptível no loop & Não observado & Não observado & Não observado \
     \begin{itemize}
         \item Portar para RTOS utilizando MCU com maior capacidade
         \item Adicionar monitramento/telemetria contínua
-        \item Implementar CRC32 + ACK/NACK
+        \item Implementar controle de integridade (CRC)
         \item Introduzir uma camada de abstração de hardware
-        \item Suporte a múltiplos alvos simultâneos (ferramenta host)
+        \item Suporte a múltiplas plataformas embarcadas
     \end{itemize}
 \end{frame}
 
