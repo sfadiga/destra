@@ -136,7 +136,7 @@ avançar à etapa subsequente.
 \FloatBarrier
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.9\textwidth]{recursos/figuras/destra_diagrama_estados.png}
+    \includegraphics[width=0.95\textwidth]{recursos/figuras/destra_diagrama_estados.png}
     \caption{Diagrama de estados para a implementação do protocolo DESTRA}
     \label{fig:destra_diagrama_estados}
 \end{figure}
@@ -266,7 +266,7 @@ processamento intermediárias.
 \FloatBarrier
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.9\textwidth]{recursos/figuras/destra_diagrama_sequencia_peek.png}
+    \includegraphics[width=0.95\textwidth]{recursos/figuras/destra_diagrama_sequencia_peek.png}
     \caption{Diagrama de sequencia de um comando peek a partir da ferramenta host}
     \label{fig:destra_diagrama_sequencia_peek}
 \end{figure}
@@ -315,7 +315,7 @@ validação, escrita em memória e confirmação.
 \FloatBarrier
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.9\textwidth]{recursos/figuras/destra_diagrama_sequencia_poke.png}
+    \includegraphics[width=0.95\textwidth]{recursos/figuras/destra_diagrama_sequencia_poke.png}
     \caption{Diagrama de sequencia de um comando poke a partir da ferramenta host}
     \label{fig:destra_diagrama_sequencia_poke}
 \end{figure}
@@ -344,7 +344,7 @@ completa da operação e facilita a validação e verificação do protocolo.
 \FloatBarrier
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.85\textwidth]{recursos/figuras/destra_diagrama_sequencia_ferramenta_host.png}
+    \includegraphics[width=0.95\textwidth]{recursos/figuras/destra_diagrama_sequencia_ferramenta_host.png}
     \caption{Diagrama de sequência da operação peek. O fluxo ilustra as interações 
     temporais entre a interface DESTRA UI, o módulo de protocolo Python, a comunicação 
     serial UART, e a máquina de estados do sistema embarcado, demonstrando o ciclo 
@@ -437,14 +437,15 @@ Embora o protocolo atual implemente apenas as operações básicas de peek e pok
 
 Essas perspectivas reforçam o caráter modular e aberto da solução, permitindo sua adoção em diferentes cenários industriais e acadêmicos.
 
+
 \section{Resumo do Capítulo}
 
-A concepção e implementação do protocolo de comunicação peek/poke mostraram-se eficazes como solução de baixo custo e alta portabilidade para depuração em sistemas embarcados. O uso de uma máquina de estados simples, aliada a comandos minimamente estruturados, garante determinismo na interpretação das mensagens e confiabilidade na execução das operações de leitura e escrita em memória.
+A concepção e implementação do protocolo de comunicação \textit{peek/poke} mostraram-se eficazes como uma solução de baixo custo e alta portabilidade para depuração em sistemas embarcados. O uso de uma máquina de estados simples, aliada a comandos minimamente estruturados, garante determinismo na interpretação das mensagens e confiabilidade na execução das operações de leitura e escrita em memória. 
 
 Essa abordagem reduz a complexidade de integração, ao mesmo tempo em que mantém a robustez necessária para cenários de prototipagem e análise em tempo real. A modularidade da solução permite a expansão do protocolo com novos comandos ou mecanismos de segurança sem comprometer o desempenho ou exigir modificações estruturais profundas.
 
-A distinção clara entre software embarcado e ferramenta host garante separação de responsabilidades, facilitando a manutenção, evolução e adaptação para diferentes plataformas de hardware. Por fim, a integração com a ferramenta host em Python e a interface DESTRA UI evidencia a preocupação em tornar a solução acessível tanto para desenvolvedores experientes quanto para usuários com menor familiaridade com ambientes de baixo nível.
+A distinção clara entre o software embarcado e a ferramenta host garante a separação de responsabilidades, facilitando a manutenção, a evolução e a adaptação para diferentes plataformas de hardware. Por fim, a integração com a ferramenta host desenvolvida em Python e com a interface gráfica DESTRA UI evidencia a preocupação em tornar a solução acessível tanto para desenvolvedores experientes quanto para usuários com menor familiaridade com ambientes de baixo nível.
 
-Assim, o protocolo consolidou-se como um recurso que une praticidade, eficiência e potencial de evolução, estabelecendo a base para futuras melhorias no contexto de depuração e instrumentação de sistemas críticos.
+Assim, o protocolo consolida-se como um recurso que alia praticidade, eficiência e potencial de evolução, estabelecendo uma base consistente para futuras melhorias no contexto de depuração e instrumentação de sistemas embarcados críticos.\footnote{A implementação completa do protocolo, incluindo o firmware embarcado, a especificação dos comandos, a ferramenta host e os casos de teste utilizados durante o desenvolvimento, encontra-se disponível em um repositório público, que reúne todos os artefatos necessários para a reprodução, validação e extensão da solução proposta \cite{fadiga2025destra}.}
 
-A implementação completa do protocolo DESTRA, incluindo o firmware embarcado, a especificação dos comandos, a ferramenta host e os casos de teste utilizados durante o desenvolvimento, está disponibilizada em um repositório público mantido pelo autor \cite{fadiga2025destra}. Esse repositório contém todos os artefatos necessários para reprodução, validação e extensão da solução proposta, permitindo que pesquisadores e engenheiros possam inspecionar o código-fonte integral, acompanhar o histórico de desenvolvimento e utilizar a ferramenta como base para trabalhos futuros.
+

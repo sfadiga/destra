@@ -1,0 +1,78 @@
+Tema: Depuração de Sistemas em Tempo Real: Uma Abordagem
+de Instrumentação de Código para Testes de Sistemas
+Críticos
+Autor:Sandro Fadiga
+
+Data: 26/12 - 9am - link:https://meet.google.com/zpu-eane-idc?hs=224
+
+RESUMO
+Ok, com itens pré-textuais de acordo com norma
+Colocar o objetivo segundo o que está no texto
+Verificar quantidade de palavras chave ( acho que o ideal são 3)
+Sandro - atualizei o resumo/abstract e segui a orientação
+
+INTRODUCAO
+
+Referencias para as citações? 
+Sandro - referencias adicionais para a DO e o livro da Rierson, pag:
+
+Verificar como colocar o exemplo de código a ser testado  (pagina 22 -"por exemplo, if (A && B))" )
+Sandro - extendi o exemplo para ficar um pouco mais completo, coloquei um código e uma tabela com as combinações dos casos, pag:
+
+Erros de concordância ( verificar na pagina 22: "O uso de ferramentas tradicionais de debug de software é amplamente conhecido...."
+Sandro - corrigido, mudei a estrutura da página
+
+Pagina 33 - precisa de uma nota de rodapé ou referencia para o significado de "mecanismos peek/poke" ( aparece somente na pagina 34 - FUNDAMENTACAO)
+Sandro - movi a referencia inicial feita no CAP2 para o texto da motivação
+
+
+Objetivo
+Não está alinhado ao que está no resumo
+Sandro - modifiquei o resumo para ficar aderente ao objetivo
+
+FUNDAMENTACAO
+Algumas definições precisam de referencias ( exemplo: definição de tempo real e determinismo - pagina 	27)
+Referencias antigas (+ 10 anos)- elas devem ser referencias da área (livros didáticos ou artigos de referencia da área)
+Há alguma referencia à DO-178C? e as outras normas?
+Sandro - texto aprimorado e referências adicionadas
+
+Pag 33 - referencias aos protocolos de comunicação ( UART, CAN, ETHERNET)
+Sandro - texto aprimorado e referências adicionadas
+
+DESENVOLVIMENTO PROTOCOLO
+Bem descrito, mas poderiam ter mais diagramas, como Maquinas de estado ou fluxogramas, deixando o código para apêndices
+As figuras estão com baixa resolução ou com informações de difícil leitura
+Sandro - editei e melhorei a visibilidade das imagens, mudei as cores de fundo e aumentei seu tamanho
+
+Interessante o paragrafo final, pois é um capitulo extenso
+A autorreferencia pode ser substituída por uma nota de rodapé (pagina 55)
+Sandro - adicionado o rodapé
+
+METODOLOGIA E TESTES
+Para descrição da placa Arduino uno, eu usaria um diagrama do fabricante (exemplo: https://docs.arduino.cc/hardware/uno-rev3/ ou https://docs.arduino.cc/resources/pinouts/A000066-full-pinout.pdf ) para mostrar o hardware e a pinagem 
+Sandro - utilizada a imagem da referencia proposta (esquemático da placa)
+
+na figura 9 eu dividiria os 4 screens colocados em 4 figuras ( não dá para ver em detalhes cada uma), idem figura 11 ( pag 71 e 72)
+Sandro - figura 9 e 10 e 11, foram divididas conforme requisitado
+
+CONCLUSAO E TRABALHOS FUTUROS
+Achei interessante como é discutida a conclusão, e colocadas as contribuições e limitações do estado atual do projeto
+
+Referencias
+
+Você usou as referencias no texto????
+Sandro - atualizei as referencias no arquivo tex/bib
+
+Apêndices - não vale a pena colocar isso em um GITHUB? São quase 60 paginas de código
+Sandro - os textos foram removidos e utilizei um apêndice para referenciar o projeto no GitHub explicando sua estrutura e organização
+
+APRESENTAÇÃO
+
+INICIO 9:00
+FIM    9:52
+
+Slides
+Duvida: tabela 2, esses são parâmetros requisitados pela norma?
+Postura
+Muita informação, faltou uma síntese para o tempo proposto, mas a quantidade e qualidade de informações é alta.
+Não diminua o seu trabalho: é difícil ver esse tipo de sistema em hardware de 8 bits no meio de ensino ( qual sua formação?)

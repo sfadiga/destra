@@ -22,7 +22,7 @@ A Figura \ref{fig:arduino_uno} apresenta a placa Arduino UNO com destaque para s
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.7\textwidth]{recursos/figuras/arduino_uno.png}
-    \caption{Placa Arduino UNO. A imagem destaca os principais componentes: 
+    \caption{Esquema do Arduino UNO. A imagem destaca os principais componentes: 
     (a) microcontrolador ATmega328P, (b) conexão USB, (c) pinos digitais de I/O, 
     (d) entradas analógicas, (e) botão de reset, (f) regulador de tensão, 
     e (g) cristal oscilador de 16 MHz.}
@@ -462,15 +462,43 @@ A seguir apresenta-se um resumo detalhado e análise crítica dos dados obtidos 
 
 \subsection{Teste de Latência}
 
+O gráficos a seguir aprensentam resultados do teste de latência: (a) latência ao longo do tempo, (b) distribuição da latência, (c) jitter temporal e (d) análise estatística dos valores medidos, e foram obtidos a partir da execução do script Python \texttt{performance\_tests.py}.
+
 \FloatBarrier
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.90\textwidth]{recursos/figuras/teste_latencia_grafico.png}
-    \caption{Gráfico de resultados do teste de latência - insira a figura aqui}
-    \label{fig:teste_latencia_grafico}
+    \includegraphics[width=0.90\textwidth]{recursos/figuras/teste_latencia_grafico_a.png}
+    \caption{Latência ao longo do tempo (a)}
+    \label{fig:teste_latencia_grafico_a}
 \end{figure}
 
-Para o teste de latência, foi configurado um número de amostras (operações de peek) igual a 100. Os resultados foram:
+\FloatBarrier
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.90\textwidth]{recursos/figuras/teste_latencia_grafico_b.png}
+    \caption{Distribuição da latência (b)}
+    \label{fig:teste_latencia_grafico_b}
+\end{figure}
+
+
+\FloatBarrier
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.90\textwidth]{recursos/figuras/teste_latencia_grafico_c.png}
+    \caption{Jitter ao longo do tempo (c)}
+    \label{fig:teste_latencia_grafico_c}
+\end{figure}
+
+
+\FloatBarrier
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.90\textwidth]{recursos/figuras/teste_latencia_grafico_d.png}
+    \caption{Análise estatística da latência (d)}
+    \label{fig:teste_latencia_grafico_d}
+\end{figure}
+
+Para o teste de latência, foi configurado um número de amostras (operações de peek) igual a 100. Os resultados obtidos foram:
 
 \FloatBarrier
 \begin{table}[htbp]
@@ -562,12 +590,38 @@ A latência média de 10,016 ms indica um tempo de resposta estável e previsív
 
 \subsection{Teste de Estresse}
 
+O gráficos a seguir aprensentam resultados do teste de estresse: (a) latência ao longo do tempo, (b) distribuição da latência, (c) jitter temporal e (d) análise estatística dos valores medidos, e foram obtidos a partir da execução do script Python \texttt{performance\_tests.py}.
+
 \FloatBarrier
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.90\textwidth]{recursos/figuras/teste_estresse_grafico.png}
-    \caption{Gráfico de resultados do teste de estresse.}
-    \label{fig:teste_estresse_grafico}
+    \includegraphics[width=0.90\textwidth]{recursos/figuras/teste_estresse_grafico_a.png}
+    \caption{Latência ao longo do tempo (a)}
+    \label{fig:teste_estresse_grafico_a}
+\end{figure}
+
+\FloatBarrier
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.90\textwidth]{recursos/figuras/teste_estresse_grafico_b.png}
+    \caption{Distribuição da latência (b)}
+    \label{fig:teste_estresse_grafico_b}
+\end{figure}
+
+\FloatBarrier
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.90\textwidth]{recursos/figuras/teste_estresse_grafico_c.png}
+    \caption{Jitter ao longo do tempo (c)}
+    \label{fig:teste_estresse_grafico_c}
+\end{figure}
+
+\FloatBarrier
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.90\textwidth]{recursos/figuras/teste_estresse_grafico_d.png}
+    \caption{Análise estatística da latência (d)}
+    \label{fig:teste_estresse_grafico_d}
 \end{figure}
 
 Para o teste de estresse, foi configurada uma duração de 60 segundos realizando operações de peek contínuas. Os resultados foram:
@@ -660,12 +714,38 @@ Durante 60 segundos de operação contínua, o sistema manteve taxa de erro zero
 
 \subsection{Teste de Rajada (Burst)}
 
+O gráficos a seguir aprensentam resultados do teste de rajada: (a) latência ao longo do tempo, (b) distribuição da latência, (c) jitter temporal e (d) análise estatística dos valores medidos, e foram obtidos a partir da execução do script Python \texttt{performance\_tests.py}.
+
 \FloatBarrier
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.90\textwidth]{recursos/figuras/teste_rajada_grafico.png}
-    \caption{Gráfico de resultados do teste de rajada.}
-    \label{fig:teste_rajada_grafico}
+    \includegraphics[width=0.90\textwidth]{recursos/figuras/teste_rajada_grafico_a.png}
+    \caption{Latência ao longo do tempo (a)}
+    \label{fig:teste_rajada_grafico_a}
+\end{figure}
+
+\FloatBarrier
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.90\textwidth]{recursos/figuras/teste_rajada_grafico_b.png}
+    \caption{Distribuição da latência (b)}
+    \label{fig:teste_rajada_grafico_b}
+\end{figure}
+
+\FloatBarrier
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.90\textwidth]{recursos/figuras/teste_rajada_grafico_c.png}
+    \caption{Jitter ao longo do tempo (c)}
+    \label{fig:teste_rajada_grafico_c}
+\end{figure}
+
+\FloatBarrier
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.90\textwidth]{recursos/figuras/teste_rajada_grafico_d.png}
+    \caption{Análise estatística da latência (d)}
+    \label{fig:teste_rajada_grafico_d}
 \end{figure}
 
 O teste de rajada foi executado disparando um total de 10.000 comandos (1.000 em sequências de 10 chamadas). Os resultados foram:
@@ -761,7 +841,6 @@ No cenário de rajada, o protocolo processou 10.000 operações sem erros, mante
 
 A execução do Cenário 2 foi feita com o osciloscópio conectado com a sonda as portas do Arduino e para cada teste a sonda foi movida para o pino alvo do teste, a ferramenta host (DESTRA UI) foi utilizada para estimular as saídas dos pinos enviando comandos de peek a taxas variadas entre 10hz, 100hz e 1khz.
 
-
 \FloatBarrier
 \begin{figure}[htbp]
     \centering
@@ -805,7 +884,6 @@ A Figura \ref{fig:osciloscopio_tempo_comando_10hz} demonstra o resultado da medi
     \caption{Medição de tempo de comando a 10 Hz.}
     \label{fig:osciloscopio_tempo_comando_10hz}
 \end{figure}
-
 
 A Tabela \ref{tab:osc_medicao_10hz} apresenta os parâmetros de temporização medidos pelo osciloscópio durante este teste:
 
@@ -852,7 +930,6 @@ Os resultados da medição permitem as seguintes observações:
     \item O duty cycle de 98.24\% indica que o sistema permanece em espera entre comandos, com apenas 1.76\% do tempo dedicado ao processamento ativo, refletindo a eficiência do protocolo em cenários de baixa frequência.
     \item A amplitude de 5 V confirma que o sinal está dentro dos limites esperados para lógica digital de 5V do Arduino.
 \end{itemize}
-
 
 \subsubsection{Medição a 100 Hz}
 
