@@ -1,0 +1,65 @@
+Tema: Depuração de Sistemas em Tempo Real: Uma Abordagem
+de Instrumentação de Código para Testes de Sistemas
+Críticos
+Autor:Sandro Fadiga
+
+Data: 26/12 - 9am - link:https://meet.google.com/zpu-eane-idc?hs=224
+
+RESUMO
+Ok, com itens pré-textuais de acordo com norma
+Colocar o objetivo segundo o que está no texto
+Verificar quantidade de palavras chave ( acho que o ideal são 3)
+
+INTRODUCAO
+
+Referencias para as citações? 
+Verificar como colocar o exemplo de código a ser testado  (pagina 22 -"por exemplo, if (A && B))" )
+
+Erros de concordância ( verificar na pagina 22: "O uso de ferramentas tradicionais de debug de software é amplamente conhecido...."
+
+Pagina 33 - precisa de uma nota de rodapé ou referencia para o significado de "mecanismos peek/poke" ( aparece somente na pagina 34 - FUNDAMENTACAO)
+
+Objetivo
+
+Não está alinhado ao que está no resumo
+
+FUNDAMENTACAO
+Algumas definições precisam de referencias ( exemplo: definição de tempo real e determinismo - pagina 	27)
+Referencias antigas (+ 10 anos)- elas devem ser referencias da área (livros didáticos ou artigos de referencia da área)
+Há alguma referencia à DO-178C? e as outras normas?
+Pag 33 - referencias aos protocolos de comunicação ( UART, CAN, ETHERNET)
+
+
+
+DESENVOLVIMENTO PROTOCOLO
+Bem descrito, mas poderiam ter mais diagramas, como Maquinas de estado ou fluxogramas, deixando o código para apêndices
+As figuras estão com baixa resolução ou com informações de difícil leitura
+
+Interessante o paragrafo final, pois é um capitulo extenso
+A autorreferencia pode ser substituída por uma nota de rodapé (pagina 55)
+
+METODOLOGIA E TESTES
+Para descrição da placa Arduino uno, eu usaria um diagrama do fabricante (exemplo: https://docs.arduino.cc/hardware/uno-rev3/ ou https://docs.arduino.cc/resources/pinouts/A000066-full-pinout.pdf ) para mostrar o hardware e a pinagem 
+
+na figura 10 eu dividiria os 4 screens colocados em 4 figuras ( não dá para ver em detalhes cada uma), idem figura 11 ( pag 71 e 72)
+
+
+CONCLUSAO E TRABALHOS FUTUROS
+Achei interessante como é discutida a conclusão, e colocadas as contribuições e limitações do estado atual do projeto
+
+Referencias
+
+Você usou as referencias no texto????
+
+Apêndices - não vale a pena colocar isso em um GITHUB? São quase 60 paginas de código
+
+APRESENTAÇÃO
+
+INICIO 9:00
+FIM    9:52
+
+Slides
+Duvida: tabela 2, esses são parâmetros requisitados pela norma?
+Postura
+Muita informação, faltou uma síntese para o tempo proposto, mas a quantidade e qualidade de informações é alta.
+Não diminua o seu trabalho: é difícil ver esse tipo de sistema em hardware de 8 bits no meio de ensino ( qual sua formação?)

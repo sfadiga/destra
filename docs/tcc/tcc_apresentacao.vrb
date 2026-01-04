@@ -1,0 +1,15 @@
+\frametitle{3.2 Especificação do protocolo}
+Examplo do Comando Peek:
+    \begin{center}
+        \texttt{CA FE F1 04 01 02}
+    \end{center}
+    Decomposição:
+    \begin{itemize}
+        \item \texttt{CA FE}: Palavras mágicas
+        \item \texttt{F1}: Comando PEEK
+        \item \texttt{04}: Byte baixo do endereço (LSB)
+        \item \texttt{01}: Byte alto do endereço (MSB)
+        \item \texttt{02}: Tamanho (2 bytes)
+    \end{itemize}
+    \vspace{0.5cm}
+    Nota: o endereço \texttt{0x0104} é transmitido como \texttt{04 01} (little-endian).
