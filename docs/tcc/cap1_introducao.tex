@@ -30,11 +30,9 @@ De forma mais específica, o MCDC impõe que os seguintes requisitos sejam atend
     \item Cada condição atômica demonstre influência independente sobre o resultado da decisão, exigindo a construção de casos de teste nos quais a alteração isolada de uma condição modifique o resultado final da decisão.
 \end{enumerate}
 
-Considerando, por exemplo, a decisão lógica apresentada no Código~\ref{lst:mcdc_exemplo}, composta pelas condições atômicas $A$, $B$ e $C$, a aplicação do critério MCDC requer a definição de casos de teste que demonstrem que cada uma dessas condições influencia de forma independente o resultado da decisão.
+Considerando, por exemplo, a decisão lógica apresentada na Listagem~\ref{lst:mcdc_exemplo}, composta pelas condições atômicas $A$, $B$ e $C$, a aplicação do critério MCDC requer a definição de casos de teste que demonstrem que cada uma dessas condições influencia de forma independente o resultado da decisão.
 
-\begin{lstlisting}[language=C,
-                   caption={Exemplo de decisão lógica para análise de MCDC},
-                   label={lst:mcdc_exemplo}]
+\begin{lstlisting}[language=C, caption={Exemplo de decisão lógica para análise de MCDC}, label=lst:mcdc_exemplo, extendedchars=false, basicstyle=\ttfamily]
 bool evaluate_decision(bool A, bool B, bool C) {
     if ((A && B) || C) {
         return true;
@@ -98,25 +96,27 @@ A depuração de sistemas embarcados críticos, especialmente aqueles de tempo r
 
 Nesse contexto, torna-se relevante desenvolver soluções específicas que permitam a inspeção controlada de estados internos do sistema sem comprometer sua execução. As operações de inspeção e modificação remota de memória — tradicionalmente conhecidas como \textit{peek} (leitura) e \textit{poke} (escrita) — constituem um dos mecanismos mais antigos e difundidos no contexto da depuração de sistemas computacionais e embarcados. Inicialmente popularizadas em plataformas de microcomputadores e linguagens interpretadas, essas operações foram posteriormente incorporadas ao desenvolvimento de sistemas embarcados como um meio simples e direto de acessar variáveis internas durante a execução \cite{dorfman2008obscurity}. Apesar das evoluções significativas em ferramentas e protocolos ao longo dos anos, o conceito permanece central para arquiteturas de depuração, sendo frequentemente encapsulado em interfaces padronizadas, APIs ou camadas de abstração \cite{singh2020peek}.
 
-Embora a literatura acadêmica apresente limitações quanto à documentação formal de técnicas leves de depuração em plataformas de prototipagem, observa-se na prática que dispositivos amplamente utilizados, como Arduino e ESP32, incorporam utilitários de depuração em tempo real em seus ambientes de desenvolvimento. Tais mecanismos — muitas vezes implementados por meio de operações simples de leitura e escrita em memória (\textit{peek/poke}) ou via interfaces seriais — têm sido empregados por desenvolvedores para acelerar o processo de teste e validação durante o protótipo inicial de aplicações embarcadas. Apesar de não constituírem soluções completas de depuração nem substituírem métodos estruturados, essas ferramentas ilustram a demanda crescente por mecanismos acessíveis de inspeção e interação em tempo de execução, especialmente em projetos de propósito geral.
+Entretanto, em sistemas embarcados críticos — como os empregados na indústria aeroespacial, automotiva ou médico-hospitalar — tais soluções não podem ser utilizadas diretamente, uma vez que não atendem aos requisitos de certificação impostos por normas regulatórias internacionais. No setor aeronáutico, por exemplo, o DO-178C (Software Considerations in Airborne Systems and Equipment Certification) estabelece critérios rigorosos de desenvolvimento, validação e rastreabilidade de requisitos para softwares embarcados. De forma complementar, o DO-330 (Software Tool Qualification Considerations) regulamenta o uso de ferramentas de apoio, exigindo qualificação formal caso seus resultados interfiram em atividades de verificação.
 
-De maneira análoga, outras indústrias impõem normas específicas, como a ISO 26262 no setor automotivo, a IEC 62304 para dispositivos médicos e a IEC 61508 em sistemas de segurança funcional. Diante dessas exigências, fabricantes de microcontroladores e plataformas comerciais não disponibilizam, em geral, soluções de depuração do tipo peek/poke aptas a serem empregadas diretamente em sistemas críticos.
+Embora a literatura acadêmica apresente limitações quanto à documentação formal de técnicas leves de depuração em plataformas de prototipagem, observa-se na prática que dispositivos amplamente utilizados, como Arduino e ESP32, incorporam utilitários de depuração em tempo real em seus ambientes de desenvolvimento. Tais mecanismos — muitas vezes implementados por meio de operações simples de leitura e escrita em memória (\textit{peek} e \textit{poke}) ou via interfaces seriais — têm sido empregados por desenvolvedores para acelerar o processo de depuração e teste durante o protótipo inicial de aplicações embarcadas. Apesar de não constituírem soluções completas de depuração nem substituírem métodos estruturados, essas ferramentas ilustram a demanda crescente por mecanismos acessíveis de inspeção e interação em tempo de execução, especialmente em projetos de propósito geral.
+
+De maneira análoga, outras indústrias impõem normas específicas, como a ISO 26262 no setor automotivo, a IEC 62304 para dispositivos médicos e a IEC 61508 em sistemas de segurança funcional. Diante dessas exigências, fabricantes de microcontroladores e plataformas comerciais não disponibilizam, em geral, soluções de depuração do tipo \textit{peek} e \textit{poke} aptas a serem empregadas diretamente em sistemas críticos.
 
 Ferramentas amplamente difundidas, como o Arduino Serial Monitor, o ESPIDF Monitor ou ambientes de desenvolvimento integrados (IDEs) fornecidos por fornecedores como STMicroelectronics (STM32CubeIDE) e Espressif, não contemplam processos de certificação de software e tampouco oferecem rastreabilidade de requisitos ou cobertura de testes exigida para níveis de criticidade elevados (DAL A e B, conforme o DO-178C).
 
-Dessa forma, torna-se necessária a criação interna (in-house) de soluções de depuração adaptadas (tailored) ao sistema em desenvolvimento, de modo que o protocolo de comunicação, a arquitetura de software embarcado e as ferramentas de suporte sejam especificados, implementados e verificados em conformidade com o nível de garantia de desenvolvimento (Design Assurance Level – DAL) aplicável. Esse processo garante que cada requisito funcional seja rastreado, testado e documentado, permitindo que a ferramenta de depuração não comprometa a conformidade regulatória nem a integridade do sistema em operação.
+Dessa forma, torna-se necessária a criação interna (\textit{in-house}) de soluções de depuração adaptadas (\textit{tailored}) ao sistema em desenvolvimento, de modo que o protocolo de comunicação, a arquitetura de software embarcado e as ferramentas de suporte sejam especificados, implementados e verificados em conformidade com o nível de garantia de desenvolvimento (Design Assurance Level - DAL) aplicável. Esse processo garante que cada requisito funcional seja rastreado, testado e documentado, permitindo que a ferramenta de depuração não comprometa a conformidade regulatória nem a integridade do sistema em operação.
 
 \section{Objetivos}
 
 \subsection{Objetivo Geral}
 
-Propor, implementar e validar um protocolo simples de peek e poke para observação e modificação controlada de estados internos em sistemas embarcados de tempo real, a fim de apoiar atividades de teste e depuração.
+Propor, implementar e validar um protocolo simples de \textit{peek} e \textit{poke} para observação e modificação controlada de estados internos em sistemas embarcados de tempo real, a fim de apoiar atividades de teste e verificação.
 
 \subsection{Objetivos Específicos}
 
 \begin{itemize}
     \item Estudar os conceitos de depuração em sistemas embarcados e protocolos de comunicação aplicáveis;
-    \item Definir os requisitos e a arquitetura de um protocolo de peek e poke;
+    \item Definir os requisitos e a arquitetura de um protocolo de \textit{peek} e \textit{poke};
     \item Implementar o protocolo em um microcontrolador de baixo custo (ex.: Arduino);
     \item Desenvolver uma ferramenta cliente para interação com o protocolo;
     \item Avaliar o funcionamento do protocolo em cenários de teste representativos.

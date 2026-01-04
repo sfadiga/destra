@@ -1,0 +1,98 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[portuguese]{babel}
+\usepackage{xcolor}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+
+\geometry{margin=2.5cm}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Sandro Fadiga}
+\lhead{Respostas às Correções da Banca}
+\cfoot{\thepage}
+
+\definecolor{azulbanca}{RGB}{0, 0, 150}
+\definecolor{verdeautor}{RGB}{0, 128, 0}
+
+\setlist[itemize]{leftmargin=*, label={}}
+
+\title{\textbf{Respostas às Sugestões de Correção da Banca}\\
+Depuração de Sistemas em Tempo Real: Uma Abordagem de Instrumentação de Código para Testes de Sistemas Críticos}
+\author{Sandro Fadiga}
+\date{04 de janeiro de 2026}
+
+\begin{document}
+
+\maketitle
+
+\section*{RESUMO}
+\textbf{\color{azulbanca}Requisição da banca:} Ok, com itens pré-textuais de acordo com norma. Colocar o objetivo segundo o que está no texto. Verificar quantidade de palavras chave (acho que o ideal são 3).\\
+
+\textbf{\color{verdeautor}Resposta do autor:} Atualizei o resumo/abstract e segui a orientação — Páginas 9 e 10.
+
+\section*{INTRODUÇÃO}
+\textbf{\color{azulbanca}Requisição da banca:} Referências para as citações? Verificar como colocar o exemplo de código a ser testado (página 22 — "por exemplo, if (A \&\& B))"). Erros de concordância (verificar na página 22: "O uso de ferramentas tradicionais de debug de software é amplamente conhecido..."). Página 33 — precisa de uma nota de rodapé ou referência para o significado de "mecanismos peek/poke" (aparece somente na página 34 — FUNDAMENTAÇÃO).\\
+
+\textbf{\color{verdeautor}Resposta do autor:}
+\begin{itemize}
+    \item Referências adicionais para a DO-178C e o livro da Rierson — Páginas 19--20.
+    \item Extendi o exemplo de código, adicionei listagem e tabela com casos de teste MCDC — Páginas 22--24.
+    \item Corrigidos erros de concordância e reorganizada a estrutura — Páginas 22--24.
+    \item Referência inicial aos mecanismos peek/poke antecipada para a seção 1.2 Motivação — Página 22.
+\end{itemize}
+
+\textbf{\color{azulbanca}Requisição da banca:} Objetivo — Não está alinhado ao que está no resumo.\\
+
+\textbf{\color{verdeautor}Resposta do autor:} Modifiquei o resumo/abstract para ficar aderente ao objetivo — Não fiz modificações relacionadas ao Objetivo.
+
+\section*{FUNDAMENTAÇÃO}
+\textbf{\color{azulbanca}Requisição da banca:} Algumas definições precisam de referências (exemplo: definição de tempo real e determinismo — página 27). Referências antigas (+10 anos) — elas devem ser referências da área (livros didáticos ou artigos de referência da área). Há alguma referência à DO-178C e às outras normas? Página 33 — referências aos protocolos de comunicação (UART, CAN, ETHERNET).\\
+
+\textbf{\color{verdeautor}Resposta do autor:}
+\begin{itemize}
+    \item Texto aprimorado com referências atualizadas e específicas da área. Adicionada referência à DO-178C e outras normas em 2.1 (páginas 27--31).
+    \item Aprimoradas as seções 2.1.1 (páginas 27--28) com citações para definições de tempo real e determinismo.
+    \item Adicionadas referências aos protocolos UART, CAN e Ethernet — Páginas 33--34.
+\end{itemize}
+
+\section*{DESENVOLVIMENTO DO PROTOCOLO}
+\textbf{\color{azulbanca}Requisição da banca:} Bem descrito, mas poderiam ter mais diagramas, como máquinas de estado ou fluxogramas, deixando o código para apêndices. As figuras estão com baixa resolução ou com informações de difícil leitura. Interessante o parágrafo final, pois é um capítulo extenso. A autorreferência pode ser substituída por uma nota de rodapé (página 55).\\
+
+\textbf{\color{verdeautor}Resposta do autor:}
+\begin{itemize}
+    \item Melhorada a qualidade e legibilidade das figuras (aumentado tamanho, alteradas cores de fundo) — Páginas 41, 42, 45, 46, 48, 50, 52, 54.
+    \item Autorreferência substituída por nota de rodapé — Página 54.
+\end{itemize}
+
+\section*{METODOLOGIA E TESTES}
+\textbf{\color{azulbanca}Requisição da banca:} Para descrição da placa Arduino Uno, eu usaria um diagrama do fabricante
+ (exemplo: \texttt{https://docs.arduino.cc/hardware/uno-rev3/} ou 
+ \\
+ \texttt{https://docs.arduino.cc/resources/pinouts/A000066-full-pinout.pdf}) para mostrar o hardware e a pinagem. Na figura 9 eu dividiria os 4 screens colocados em 4 figuras (não dá para ver em detalhes cada uma), idem figura 11 (páginas 71 e 72).\\
+
+\textbf{\color{verdeautor}Resposta do autor:}
+\begin{itemize}
+    \item Incluído esquemático oficial da placa Arduino UNO (referência do fabricante) — Página 57--58.
+    \item Figuras 9, 10 e 11 desmembradas em múltiplas figuras individuais para melhor visualização — Páginas 67--68, 71--75, 78--92.
+\end{itemize}
+
+\section*{CONCLUSÃO E TRABALHOS FUTUROS}
+\textbf{\color{azulbanca}Requisição da banca:} Achei interessante como é discutida a conclusão, e colocadas as contribuições e limitações do estado atual do projeto.\\
+
+\textbf{\color{verdeautor}Resposta do autor:} (Nenhuma alteração necessária — comentário positivo da banca.)
+
+\section*{REFERÊNCIAS}
+\textbf{\color{azulbanca}Requisição da banca:} Você usou as referências no texto????\\
+
+\textbf{\color{verdeautor}Resposta do autor:} Atualizei as referências erradas (alguns ctrl+c ctrl+v do \texttt{\textbackslash cite} no texto) e corrigi no arquivo tex/bib — Página 97.
+
+\section*{APÊNDICES}
+\textbf{\color{azulbanca}Requisição da banca:} Apêndices — não vale a pena colocar isso em um GitHub? São quase 60 páginas de código.\\
+
+\textbf{\color{verdeautor}Resposta do autor:} Os textos foram removidos e utilizei um apêndice para referenciar o projeto no GitHub explicando sua estrutura e organização. Páginas 101--102.
+
+\end{document}

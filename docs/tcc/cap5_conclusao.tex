@@ -28,7 +28,7 @@ Durante a execução dos testes e da validação funcional do protocolo, algumas
 
 \subsection{Ausência de Operações Contínuas}
 
-A primeira limitação diz respeito à ausência de suporte a operações contínuas de leitura ou escrita (\textit{continuous peek/poke}). Atualmente, cada requisição precisa ser iniciada de forma individual, o que limita o uso do protocolo em medições de alta frequência ou em observações contínuas de variáveis dinâmicas. A inclusão de um modo de operação contínua permitiria capturar séries temporais de forma mais eficiente, reduzindo a sobrecarga de comandos e ampliando o potencial de análise temporal.
+A primeira limitação diz respeito à ausência de suporte a operações contínuas de leitura ou escrita (\textit{continuous peek e poke}). Atualmente, cada requisição precisa ser iniciada de forma individual, o que limita o uso do protocolo em medições de alta frequência ou em observações contínuas de variáveis dinâmicas. A inclusão de um modo de operação contínua permitiria capturar séries temporais de forma mais eficiente, reduzindo a sobrecarga de comandos e ampliando o potencial de análise temporal.
 
 \subsection{Falta de Mecanismos de Integridade}
 
@@ -43,7 +43,7 @@ Por fim, destaca-se que o framework, em sua forma atual, foi projetado para ambi
 Dando continuidade ao trabalho, propõem-se as seguintes evoluções e aprimoramentos:
 
 \begin{enumerate}
-    \item \textbf{Implementação de Operações Contínuas:} Suporte a \textit{continuous peek/poke}, permitindo leitura e escrita contínua em variáveis selecionadas com temporização configurável.
+    \item \textbf{Implementação de Operações Contínuas:} Suporte a \textit{continuous peek e poke}, permitindo leitura e escrita contínua em variáveis selecionadas com temporização configurável.
     \item \textbf{Mecanismos de Integridade de Dados:} Inclusão de verificação de redundância cíclica (CRC) nos pacotes de comunicação, garantindo detecção de erros de transmissão e validação completa dos dados trocados.
     \item \textbf{Suporte a RTOS e Multitarefa:} Extensão do protocolo para ambientes com sistemas operacionais de tempo real, de forma a permitir sua aplicação em sistemas mais complexos e próximos de aplicações aeronáuticas reais.
     \item \textbf{Integração com Ferramentas de Teste:} Integração com ferramentas de teste automatizado e bancos de requisitos, permitindo o registro automático de medições como evidências de verificação.
@@ -67,7 +67,7 @@ Espera-se que este trabalho estimule futuras pesquisas e desenvolvimentos na ár
 As principais contribuições deste trabalho podem ser assim resumidas:
 
 \begin{itemize}
-    \item Desenvolvimento de um protocolo simples, determinístico e modular para operações peek/poke em sistemas embarcados de baixo custo.
+    \item Desenvolvimento de um protocolo simples, determinístico e modular para operações \textit{peek} e \textit{poke} em sistemas embarcados de baixo custo.
     \item Implementação completa do protocolo em Arduino UNO com instrumentação para coleta de métricas de desempenho.
     \item Desenvolvimento de ferramenta host em Python com interface gráfica intuitiva, suportando carregamento de símbolos ELF/DWARF e operações de monitoramento em tempo real.
     \item Validação experimental abrangente através de testes de latência, estresse e rajada, com medições correlacionadas por osciloscópio.
