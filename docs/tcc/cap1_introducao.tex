@@ -16,19 +16,66 @@ Em sistemas de tempo real, cálculos e estados internos ao sistema estão associ
     \item Gravação em saída dos valores de cálculo.
 \end{enumerate}
 
-Neste modelo de execução, o software está submetido aos requisitos que definem margens de segurança, como o ``worst case execution time'' (WCET), o qual define quanto tempo o software pode ocupar no ciclo de execução total do sistema. Este tipo de requisito reserva um slot de tempo no sistema para o qual o software poderá ocupar na execução do seu ciclo. É necessária uma garantia de que o software em nenhum momento exceda o tempo total alocado, o qual vem acompanhado de uma margem de segurança.
+Neste modelo de execução, o software está submetido aos requisitos que definem margens de segurança, como o \textit{Worst-Case Execution Time} (WCET), o qual define quanto tempo o software pode ocupar no ciclo de execução total do sistema. Este tipo de requisito reserva um slot de tempo no sistema para o qual o software poderá ocupar na execução do seu ciclo. É necessária uma garantia de que o software em nenhum momento exceda o tempo total alocado, o qual vem acompanhado de uma margem de segurança.
 
-Além do WCET, temos as análises de ``modified condition/decision coverage'' (MCDC), que são critérios de cobertura de testes estruturais do código. Este rigoroso teste verifica as seguintes condições:
+Além da análise de WCET, são empregadas análises de cobertura estrutural do código, como o \textit{Modified Condition/Decision Coverage} (MCDC). Esse critério de cobertura é amplamente adotado em sistemas embarcados críticos, especialmente no contexto da certificação aeronáutica, conforme definido pela norma DO-178C \cite{rtca2011do178c}.
+
+O critério MCDC é considerado um dos métodos mais rigorosos de cobertura estrutural, pois exige a verificação detalhada do impacto de cada condição lógica individual no resultado de uma decisão composta, contribuindo para a detecção de falhas que não seriam identificadas por critérios de cobertura menos restritivos \cite{Rierson2013}.
+
+De forma mais específica, o MCDC impõe que os seguintes requisitos sejam atendidos:
 
 \begin{enumerate}
-    \item Cada condição atômica (sub-expressão booleana dentro de uma decisão) foi avaliada como verdadeira e falsa pelo menos uma vez.
-    \item Cada decisão composta (por exemplo, \texttt{if (A \&\& B)}) foi avaliada como verdadeira e falsa pelo menos uma vez.
-    \item Cada condição influencia independentemente o resultado da decisão, ou seja, é preciso projetar testes que mostrem que mudar apenas uma condição altera o resultado da decisão.
+    \item Cada condição atômica (subexpressão booleana dentro de uma decisão) seja avaliada como verdadeira e falsa ao menos uma vez;
+    \item Cada decisão composta seja avaliada como verdadeira e falsa ao menos uma vez;
+    \item Cada condição atômica demonstre influência independente sobre o resultado da decisão, exigindo a construção de casos de teste nos quais a alteração isolada de uma condição modifique o resultado final da decisão.
 \end{enumerate}
+
+Considerando, por exemplo, a decisão lógica apresentada na Listagem~\ref{lst:mcdc_exemplo}, composta pelas condições atômicas $A$, $B$ e $C$, a aplicação do critério MCDC requer a definição de casos de teste que demonstrem que cada uma dessas condições influencia de forma independente o resultado da decisão.
+
+\begin{lstlisting}[language=C, caption={Exemplo de decisão lógica para análise de MCDC}, label=lst:mcdc_exemplo, extendedchars=false, basicstyle=\ttfamily]
+bool evaluate_decision(bool A, bool B, bool C) {
+    if ((A && B) || C) {
+        return true;
+    } else {
+        return false;
+    }
+}
+\end{lstlisting}
+
+Para se obter a cobertura completa de MCDC para as condições definidas no código apresentado na Listagem~\ref{lst:mcdc_exemplo}, é necessário, no mínimo, um conjunto de quatro casos de teste. Esse conjunto deve ser cuidadosamente projetado de forma a demonstrar, de maneira independente, a influência de cada condição atômica (A, B e C) no resultado da expressão booleana avaliada.
+
+Em conformidade com o critério MCDC, cada condição deve assumir os valores verdadeiro e falso pelo menos uma vez, e deve ser possível evidenciar que a variação isolada de uma única condição é suficiente para alterar o resultado da decisão, mantendo-se as demais condições constantes.
+
+\begin{enumerate}
+    \item Condição A: Caso de teste quando apenas A difere, e a decisão total muda;
+    \item Condição B: Caso de teste quando apenas B difere, e a decisão total muda;
+    \item Condição C: Caso de teste quando apenas C difere, e a decisão total muda.
+\end{enumerate}
+
+A Tabela~\ref{tab:mcdc_casos_de_testes} apresenta o conjunto mínimo de casos de teste necessário para satisfazer esses critérios de cobertura.
+
+\begin{table}[htbp]
+    \centering
+    \begin{tabular}{|c|c|c|c|c|}
+        \hline
+        \textbf{Teste} & \textbf{A} & \textbf{B} & \textbf{C} & \textbf{Resultado} \\
+        \hline
+        T1 & F & V & F & F \\
+        \hline
+        T2 & V & V & F & V \\
+        \hline
+        T3 & V & F & F & F \\
+        \hline
+        T4 & V & F & V & V \\
+        \hline
+    \end{tabular}
+    \caption{Conjunto mínimo de casos de teste para cobertura MCDC}
+    \label{tab:mcdc_casos_de_testes}
+\end{table}
 
 Portanto, como podemos verificar se requisitos de sistema, requisitos emergentes e de segurança estão sendo cumpridos pelo software, é necessária a verificação de valores e estados internos do software ao longo do tempo de execução. Assim, a questão central é: Como verificar tais valores sem interferir diretamente nos cálculos de valores e estados do sistema?
 
-O uso de ferramentas tradicionais de \textit{debug} de software é amplamente conhecido e utilizado na indústria de software embarcado nos estágios iniciais do desenvolvimento do software, sendo muito útil para eliminar falhas e detectar erros iniciais de codificação dos requisitos. Ao se escolher a solução de hardware para o sistema, seleciona-se em conjunto, ou mesmo é fornecido pelo fabricante, um kit de desenvolvimento de software composto por:
+Ferramentas tradicionais de \textit{debug} são amplamente utilizadas na indústria de sistemas embarcados, sobretudo nos estágios iniciais do desenvolvimento do software sendo muito úteis para eliminar falhas e detectar erros iniciais de codificação dos requisitos. Ao se escolher a solução de hardware para o sistema, seleciona-se em conjunto, ou mesmo é fornecido pelo fabricante, um kit de desenvolvimento de software composto por:
 
 \begin{itemize}
     \item Compilador para a linguagem de alto nível (normalmente C ou C++) para o hardware alvo;
@@ -47,27 +94,29 @@ Diante dessas limitações, torna-se evidente a necessidade de uma solução de 
 
 A depuração de sistemas embarcados críticos, especialmente aqueles de tempo real, enfrenta limitações quando se utilizam apenas técnicas tradicionais de testes de caixa preta. Muitos requisitos, incluindo requisitos derivados ou emergentes, só podem ser verificados por meio da observação de estados e valores internos do software durante sua execução. Ferramentas de depuração fornecidas pelos fabricantes, embora úteis, são geralmente complexas, custosas e voltadas ao desenvolvimento inicial, não sendo adequadas para fases de integração ou testes finais.
 
-Nesse contexto, torna-se relevante desenvolver soluções específicas que permitam a inspeção controlada de estados internos do sistema sem comprometer sua execução. Embora a literatura acadêmica apresente limitações quanto à documentação formal de técnicas leves de depuração em plataformas de prototipagem, observa-se na prática que dispositivos amplamente utilizados, como Arduino e ESP32, incorporam utilitários de depuração em tempo real em seus ambientes de desenvolvimento. Tais mecanismos — muitas vezes implementados por meio de operações simples de leitura e escrita em memória (“peek/poke”) ou via interfaces seriais — têm sido empregados por desenvolvedores para acelerar o processo de teste e validação durante o protótipo inicial de aplicações embarcadas. Apesar de não constituírem soluções completas de depuração nem substituírem métodos estruturados, essas ferramentas ilustram a demanda crescente por mecanismos acessíveis de inspeção e interação em tempo de execução, especialmente em projetos de propósito geral.
+Nesse contexto, torna-se relevante desenvolver soluções específicas que permitam a inspeção controlada de estados internos do sistema sem comprometer sua execução. As operações de inspeção e modificação remota de memória — tradicionalmente conhecidas como \textit{peek} (leitura) e \textit{poke} (escrita) — constituem um dos mecanismos mais antigos e difundidos no contexto da depuração de sistemas computacionais e embarcados. Inicialmente popularizadas em plataformas de microcomputadores e linguagens interpretadas, essas operações foram posteriormente incorporadas ao desenvolvimento de sistemas embarcados como um meio simples e direto de acessar variáveis internas durante a execução \cite{dorfman2008obscurity}. Apesar das evoluções significativas em ferramentas e protocolos ao longo dos anos, o conceito permanece central para arquiteturas de depuração, sendo frequentemente encapsulado em interfaces padronizadas, APIs ou camadas de abstração \cite{singh2020peek}.
 
 Entretanto, em sistemas embarcados críticos — como os empregados na indústria aeroespacial, automotiva ou médico-hospitalar — tais soluções não podem ser utilizadas diretamente, uma vez que não atendem aos requisitos de certificação impostos por normas regulatórias internacionais. No setor aeronáutico, por exemplo, o DO-178C (Software Considerations in Airborne Systems and Equipment Certification) estabelece critérios rigorosos de desenvolvimento, validação e rastreabilidade de requisitos para softwares embarcados. De forma complementar, o DO-330 (Software Tool Qualification Considerations) regulamenta o uso de ferramentas de apoio, exigindo qualificação formal caso seus resultados interfiram em atividades de verificação.
 
-De maneira análoga, outras indústrias impõem normas específicas, como a ISO 26262 no setor automotivo, a IEC 62304 para dispositivos médicos e a IEC 61508 em sistemas de segurança funcional. Diante dessas exigências, fabricantes de microcontroladores e plataformas comerciais não disponibilizam, em geral, soluções de depuração do tipo peek/poke aptas a serem empregadas diretamente em sistemas críticos.
+Embora a literatura acadêmica apresente limitações quanto à documentação formal de técnicas leves de depuração em plataformas de prototipagem, observa-se na prática que dispositivos amplamente utilizados, como Arduino e ESP32, incorporam utilitários de depuração em tempo real em seus ambientes de desenvolvimento. Tais mecanismos — muitas vezes implementados por meio de operações simples de leitura e escrita em memória (\textit{peek} e \textit{poke}) ou via interfaces seriais — têm sido empregados por desenvolvedores para acelerar o processo de depuração e teste durante o protótipo inicial de aplicações embarcadas. Apesar de não constituírem soluções completas de depuração nem substituírem métodos estruturados, essas ferramentas ilustram a demanda crescente por mecanismos acessíveis de inspeção e interação em tempo de execução, especialmente em projetos de propósito geral.
+
+De maneira análoga, outras indústrias impõem normas específicas, como a ISO 26262 no setor automotivo, a IEC 62304 para dispositivos médicos e a IEC 61508 em sistemas de segurança funcional. Diante dessas exigências, fabricantes de microcontroladores e plataformas comerciais não disponibilizam, em geral, soluções de depuração do tipo \textit{peek} e \textit{poke} aptas a serem empregadas diretamente em sistemas críticos.
 
 Ferramentas amplamente difundidas, como o Arduino Serial Monitor, o ESPIDF Monitor ou ambientes de desenvolvimento integrados (IDEs) fornecidos por fornecedores como STMicroelectronics (STM32CubeIDE) e Espressif, não contemplam processos de certificação de software e tampouco oferecem rastreabilidade de requisitos ou cobertura de testes exigida para níveis de criticidade elevados (DAL A e B, conforme o DO-178C).
 
-Dessa forma, torna-se necessária a criação interna (in-house) de soluções de depuração adaptadas (tailored) ao sistema em desenvolvimento, de modo que o protocolo de comunicação, a arquitetura de software embarcado e as ferramentas de suporte sejam especificados, implementados e verificados em conformidade com o nível de garantia de desenvolvimento (Design Assurance Level – DAL) aplicável. Esse processo garante que cada requisito funcional seja rastreado, testado e documentado, permitindo que a ferramenta de depuração não comprometa a conformidade regulatória nem a integridade do sistema em operação.
+Dessa forma, torna-se necessária a criação interna (\textit{in-house}) de soluções de depuração adaptadas (\textit{tailored}) ao sistema em desenvolvimento, de modo que o protocolo de comunicação, a arquitetura de software embarcado e as ferramentas de suporte sejam especificados, implementados e verificados em conformidade com o nível de garantia de desenvolvimento (Design Assurance Level - DAL) aplicável. Esse processo garante que cada requisito funcional seja rastreado, testado e documentado, permitindo que a ferramenta de depuração não comprometa a conformidade regulatória nem a integridade do sistema em operação.
 
 \section{Objetivos}
 
 \subsection{Objetivo Geral}
 
-Propor, implementar e validar um protocolo simples de peek e poke para observação e modificação controlada de estados internos em sistemas embarcados de tempo real, a fim de apoiar atividades de teste e depuração.
+Propor, implementar e validar um protocolo simples de \textit{peek} e \textit{poke} para observação e modificação controlada de estados internos em sistemas embarcados de tempo real, a fim de apoiar atividades de teste e verificação.
 
 \subsection{Objetivos Específicos}
 
 \begin{itemize}
     \item Estudar os conceitos de depuração em sistemas embarcados e protocolos de comunicação aplicáveis;
-    \item Definir os requisitos e a arquitetura de um protocolo de peek e poke;
+    \item Definir os requisitos e a arquitetura de um protocolo de \textit{peek} e \textit{poke};
     \item Implementar o protocolo em um microcontrolador de baixo custo (ex.: Arduino);
     \item Desenvolver uma ferramenta cliente para interação com o protocolo;
     \item Avaliar o funcionamento do protocolo em cenários de teste representativos.

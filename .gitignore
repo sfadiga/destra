@@ -211,19 +211,20 @@ __marimo__/
 
 
 # latex/tex stuff
-*.aux
-*.bbl
-*.blg
-*.fls
-*.lol
-*.gz
-*.toc
-*.fdb_latexmk
-*.lof
-*.lot
-*.nav
-*.out
-*.snm
-*.vrb
+**/*.aux
+**/*.bbl
+**/*.blg
+**/*.fls
+**/*.lol
+**/*.gz
+**/*.toc
+**/*.fdb_latexmk
+**/*.lof
+**/*.lot
+**/*.nav
+**/*.out
+**/*.snm
+**/*.vrb
 
 
+# end

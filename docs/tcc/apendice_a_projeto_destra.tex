@@ -1,0 +1,60 @@
+% ============================================================================
+% APÊNDICE A - PROJETO DESTRA NO GITHUB
+% ============================================================================
+\appendix
+\chapter{Repositório do Projeto DESTRA}
+\label{apx:repositorio_destra}
+
+Devido à extensão do código-fonte desenvolvido ao longo deste trabalho — incluindo o firmware embarcado, a ferramenta host, os módulos de instrumentação e os scripts de teste — optou-se por não incluir o código completo como apêndice impresso neste documento.
+
+A disponibilização integral de aproximadamente sessenta páginas de código comprometeria a legibilidade do trabalho e não agregaria valor técnico adicional à análise apresentada nos capítulos anteriores. Em consonância com práticas modernas de engenharia de software e pesquisa experimental, todo o código-fonte foi organizado e disponibilizado em um repositório público versionado.
+
+O repositório oficial do projeto DESTRA está disponível em:
+
+\begin{quote}
+  \url{https://github.com/sfadiga/destra/}
+\end{quote}
+
+O repositório contém todos os artefatos necessários para reprodução, validação e extensão da solução proposta, incluindo o histórico completo de desenvolvimento.
+
+\subsection{Estrutura do Repositório}
+
+A organização do repositório segue uma separação clara de responsabilidades entre os componentes do sistema, conforme descrito a seguir:
+
+\begin{itemize}
+    \item \texttt{/arduino/} — Código-fonte do firmware embarcado responsável pela implementação do protocolo DESTRA no microcontrolador (desenvolvido em linguagem C do Arduino).
+    Inclui:
+    \begin{itemize}
+        \item \texttt{/destra\_protocol\_test/} — Firmware utilizado nos ensaios experimentais e testes de desempenho.
+        Inclui:
+        \begin{itemize}
+          \item \texttt{/arduino/destra\_protocol\_test/destra\_protocol\_test.ino} — Implementação do protocolo para Arduino instrumentado para testes.
+          \item \texttt{/arduino/destra\_protocol\_test/sample.ino} — Exemplo de integração.
+        \end{itemize}
+        \item \texttt{/sample/} — Firmware mínimo de exemplo para demonstração e validação funcional do protocolo.
+        Inclui:
+        \begin{itemize}
+          \item \texttt{/arduino/sample/destra\_protocol.ino} — Implementação do protocolo para Arduino.
+          \item \texttt{/arduino/sample/sample.ino} — Exemplo de integração.
+        \end{itemize}
+    \end{itemize}
+
+    \item \texttt{/src/} — Código-fonte da aplicação \textit{host}, desenvolvida em Python, responsável pela comunicação com o dispositivo embarcado, coleta de dados, instrumentação e interface gráfica utilizada nos experimentos.
+    Inclui:
+    \begin{itemize}
+        \item \texttt{/src/data\_dictionary.py} — Parser de arquivos ELF/DWARF.
+        \item \texttt{/src/destra\_ui.py} — Interface gráfica (PySide/Qt).
+        \item \texttt{/src/destra.py} — Implementação do protocolo no host.
+        \item \texttt{/src/logger\_config.py} — Sistema de logging.
+        \item \texttt{/src/requirements.txt} — Dependências Python.
+      \end{itemize}
+    \item \texttt{/tests/} — Scripts e rotinas de teste empregados na execução dos ensaios descritos neste trabalho, incluindo testes de latência, rajada e análise estatística. Dados legados de testes preliminares são mantidos apenas para referência histórica.
+    \item \texttt{/logs/} — Arquivos de registro gerados durante a execução dos testes, contendo medições brutas de tempo, eventos de comunicação e informações de depuração, utilizados posteriormente na análise experimental.
+    \item \texttt{/docs/} — Documentação complementar do projeto, incluindo os arquivos \LaTeX{} deste trabalho acadêmico, figuras, dados experimentais consolidados e materiais de apoio à banca examinadora.
+\end{itemize}
+
+\subsection{Reprodutibilidade}
+
+O repositório contém o arquivo \texttt{README.md} localizado no diretório raiz do projeto, este inclui instruções detalhadas para: compilação do firmware, execução da ferramenta host e realização dos testes experimentais apresentados neste trabalho, permitindo a completa reprodutibilidade dos resultados obtidos.
+
+

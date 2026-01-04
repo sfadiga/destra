@@ -1,5 +1,5 @@
-rem perl.exe c:\texlive\2025\texmf-dist\scripts\latexmk\latexmk.pl -f -synctex=1 -interaction=nonstopmode -file-line-error -pdf -outdir=d:/Sandro/OneDrive/1_Estudos/CursoUSP/projetos/destra/docs/tcc d:/Sandro/OneDrive/1_Estudos/CursoUSP/projetos/destra/docs/tcc/tcc_sandro_fadiga
-pdflatex tcc_apresentacao.tex
+perl.exe c:\texlive\2025\texmf-dist\scripts\latexmk\latexmk.pl -f -synctex=1 -interaction=nonstopmode -file-line-error -pdf -outdir=d:/Sandro/OneDrive/1_Estudos/CursoUSP/projetos/destra/docs/tcc d:/Sandro/OneDrive/1_Estudos/CursoUSP/projetos/destra/docs/tcc/tcc_sandro_fadiga
+rem  pdflatex tcc_apresentacao.tex
 del *.aux
 del *.loq
 del *.gz
@@ -17,4 +17,4 @@ del *.fdb_latexmk
 del *.nav
 del *.out
 del *.snm
-
+del *.vrb
